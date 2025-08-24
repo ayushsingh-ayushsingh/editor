@@ -5,12 +5,35 @@ import "@blocknote/mantine/style.css";
 import "./styles.css";
 
 import { Block } from "@blocknote/core";
-import { BlockNoteView } from "@blocknote/mantine";
-import { useCreateBlockNote } from "@blocknote/react";
 import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
-
 import { useState } from "react";
+
+import { createGroq } from '@ai-sdk/groq';
+import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
+import '@blocknote/core/fonts/inter.css';
+import { BlockNoteView } from '@blocknote/mantine';
+import '@blocknote/mantine/style.css';
+import {
+    FormattingToolbar,
+    FormattingToolbarController,
+    SuggestionMenuController,
+    getDefaultReactSlashMenuItems,
+    getFormattingToolbarItems,
+    useCreateBlockNote,
+} from '@blocknote/react';
+import {
+    AIMenuController,
+    AIToolbarButton,
+    createAIExtension,
+    getAISlashMenuItems,
+} from '@blocknote/xl-ai';
+import '@blocknote/xl-ai/style.css';
+import { en as aiEn } from '@blocknote/xl-ai/locales';
+
+const model = createGroq({
+    apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
+})('llama-3.3-70b-versatile');
 
 export default function Editor() {
     const locale = en;
@@ -100,8 +123,14 @@ export default function Editor() {
                 default: "Type here...",
                 heading: "First Heading",
             },
+            ai: aiEn
         },
         uploadFile,
+        extensions: [
+            createAIExtension({
+                model,
+            }),
+        ],
     });
 
     const handleEditorChange = () => {
@@ -119,7 +148,43 @@ export default function Editor() {
                 editor={editor}
                 onChange={handleEditorChange}
                 data-theming-css-variables-demo
-            />
+            >
+                <AIMenuController />
+                <FormattingToolbarWithAI />
+                <SuggestionMenuWithAI editor={editor} />
+            </BlockNoteView>
         </div>
+    );
+}
+
+function FormattingToolbarWithAI() {
+    return (
+        <FormattingToolbarController
+            formattingToolbar={() => (
+                <FormattingToolbar>
+                    {...getFormattingToolbarItems()}
+                    <AIToolbarButton />
+                </FormattingToolbar>
+            )}
+        />
+    );
+}
+
+function SuggestionMenuWithAI(props: {
+    editor: BlockNoteEditor<any, any, any>;
+}) {
+    return (
+        <SuggestionMenuController
+            triggerCharacter="/"
+            getItems={async (query) =>
+                filterSuggestionItems(
+                    [
+                        ...getDefaultReactSlashMenuItems(props.editor),
+                        ...getAISlashMenuItems(props.editor),
+                    ],
+                    query
+                )
+            }
+        />
     );
 }
