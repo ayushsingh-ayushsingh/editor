@@ -210,6 +210,28 @@ export default function Editor({ userName }: EditorProps) {
         setSummary("This is a generated summary based on the article content.");
     };
 
+    // Final data to be stored
+
+    const [pageData, setPageData] = useState({
+        heading,
+        tags,
+        date: (new Date).toDateString(),
+        author: userName,
+        pageContent: [...blocks],
+        summary,
+    });
+
+    useEffect(() => {
+        setPageData({
+            heading,
+            tags,
+            date: (new Date).toDateString(),
+            author: userName,
+            summary,
+            pageContent: [...blocks],
+        })
+    }, [heading, tags, userName, storedContent, summary])
+
     return (
         <div className="max-w-5xl w-full mx-auto">
             <div className='w-full py-4'>
@@ -290,22 +312,7 @@ export default function Editor({ userName }: EditorProps) {
                 </div>
             </div>
             <div className="m-4 p-4 bg-accent">
-                heading: {heading}
-                <br />
-                <br />
-                author: {userName}
-                <br />
-                <br />
-                summary: {summary}
-                <br />
-                <br />
-                tags: {tags.map((tag) => tag.text).join(", ")}
-                <br />
-                <br />
-                date: {new Date().toDateString()}
-                <br />
-                <br />
-                pageContent: {storedContent}
+                pageData: {JSON.stringify(pageData)}
             </div>
         </div>
     );
