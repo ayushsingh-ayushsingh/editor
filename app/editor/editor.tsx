@@ -235,7 +235,7 @@ export default function Editor({ userName }: EditorProps) {
                     </h1>
                     <div className='flex gap-6 justify-between px-10 py-2 text-lg underline-offset-2'>
                         <span className='text-secondary-foreground/75'>
-                            {new Date().toDateString()}
+                            {new Date().toISOString()}
                         </span>
                         <span className="text-primary max-w-[150px] truncate inline-block">
                             ~ {userName}
@@ -288,24 +288,6 @@ export default function Editor({ userName }: EditorProps) {
                         setActiveTagIndex={setActiveTagIndex}
                     />
                 </div>
-            </div>
-            <div className="m-4 p-4 bg-accent">
-                heading: {heading}
-                <br />
-                <br />
-                author: {userName}
-                <br />
-                <br />
-                summary: {summary}
-                <br />
-                <br />
-                tags: {tags.map((tag) => tag.text).join(", ")}
-                <br />
-                <br />
-                date: {new Date().toDateString()}
-                <br />
-                <br />
-                pageContent: {storedContent}
             </div>
         </div>
     );
