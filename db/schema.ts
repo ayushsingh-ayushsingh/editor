@@ -6,10 +6,20 @@ import {
 } from "./schema/auth-schema"
 
 import {
+  chapters as chaptersTable,
+  chapterContent as chaptersContentTable
+} from "./schema/form"
+
+import {
   pageData as pageDataTable,
   tags as TagsTable,
-  pageTags as pageTagsTable
+  pageTags as pageTagsTable,
+  pageStatusEnum as statusEnum
 } from "./schema/editor-schema"
+
+import {
+  content as contentTable
+} from "./schema/content-schema"
 
 export const user = userTable;
 export const session = sessionTable;
@@ -18,6 +28,11 @@ export const verification = verificationTable;
 export const pageData = pageDataTable;
 export const tags = TagsTable;
 export const pageTags = pageTagsTable;
+export const pageStatusEnum = statusEnum;
+export const content = contentTable;
+
+export const chapters = chaptersTable;
+export const chapterContent = chaptersContentTable;
 
 export const schema = {
   user,
@@ -26,5 +41,9 @@ export const schema = {
   verification,
   tags,
   pageData,
-  pageTags
+  pageTags,
+  statusEnum,
+  content,
+  chapters,
+  chapterContent
 }

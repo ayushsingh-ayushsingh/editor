@@ -34,49 +34,19 @@ export async function savePageData(input: PageDataInput) {
     const now = new Date();
 
     try {
-        // Check if page exists
-        const existingPage = await db
-            .select()
-            .from(pageData)
-            .where(eq(pageData.id, id))
-            .limit(1);
-
-        const isUpdate = existingPage.length > 0;
-
-        if (isUpdate) {
-            const page = existingPage[0];
-
-            // Restrict update if email doesn't match
-            if (page.email !== email) {
-                console.error(`Unauthorized attempt to edit page ${id}`);
-                throw new Error('You are not authorized to edit this page.');
-            }
-
-            // Proceed to update
-            await db
-                .update(pageData)
-                .set({
-                    heading,
-                    summary,
-                    content,
-                    updatedAt: now,
-                })
-                .where(eq(pageData.id, id));
-        } else {
-            // Insert new page
-            await db.insert(pageData).values({
-                id,
-                heading,
-                author,
-                email,
-                summary,
-                parsedContent,
-                content,
-                date,
-                createdAt: now,
-                updatedAt: now,
-            });
-        }
+        // Insert new page
+        await db.insert(pageData).values({
+            id,
+            heading,
+            author,
+            email,
+            summary,
+            parsedContent,
+            content,
+            date,
+            createdAt: now,
+            updatedAt: now,
+        });
 
         // Tags logic (inside try to catch errors too)
         try {

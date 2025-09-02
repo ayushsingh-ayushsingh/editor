@@ -5,7 +5,10 @@ import {
     uuid,
     jsonb,
     primaryKey,
+    pgEnum
 } from "drizzle-orm/pg-core";
+
+export const pageStatusEnum = pgEnum("page_status", ["private", "unlisted", "published"]);
 
 export const pageData = pgTable("page_data", {
     id: uuid("id").primaryKey(),
@@ -14,8 +17,9 @@ export const pageData = pgTable("page_data", {
     email: text("email").notNull(),
     summary: text("summary"),
     content: jsonb("content").notNull(),
-    parsedContent: text("parsed_content").unique().notNull(),
+    parsedContent: text("parsed_content").notNull(),
     date: text("date").notNull(),
+    status: pageStatusEnum("status").default("private").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -40,4 +44,4 @@ export const pageTags = pgTable(
     })
 );
 
-export const editorSchema = { pageData, tags, pageTags };
+export const editorSchema = { pageData, tags, pageTags, pageStatusEnum };

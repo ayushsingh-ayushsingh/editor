@@ -1,18 +1,35 @@
-import { Editor } from "./dynamicEditor";
+import { Editor } from "../dynamicEditor";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { SheetSidebar } from "./sidebar";
+import { SheetSidebar } from "../sidebar";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getChapterContentById } from "./getChapterContentById";
 
-export default async function Page() {
+interface PageProps {
+    params: { id: string };
+}
+
+export default async function Page({ params }: PageProps) {
+    const chapterId = params.id;
+
     const session = await auth.api.getSession({
         headers: await headers(),
     });
 
     if (!session) {
         redirect("/login");
+    }
+
+    const content = await getChapterContentById(chapterId);
+
+    if (!content) {
+        return <div>Content not found</div>;
+    }
+
+    if (session.user.email != content.email) {
+        return <div>Unauthorized</div>;
     }
 
     return (
@@ -25,7 +42,7 @@ export default async function Page() {
                     Chapter - 1
                 </span>
             </div>
-            <Editor userName={session.user.name} userEmail={session.user.email} />
+            <Editor userName={session.user.name} userEmail={session.user.email} content={content} />
         </div>
     )
 }
