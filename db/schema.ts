@@ -11,6 +11,11 @@ import {
 } from "./schema/form"
 
 import {
+  chapters as exampleChaptersTable,
+  chapterContent as exampleChaptersContentTable
+} from "./schema/example-editor"
+
+import {
   pageData as pageDataTable,
   tags as TagsTable,
   pageTags as pageTagsTable,
@@ -34,6 +39,9 @@ export const content = contentTable;
 export const chapters = chaptersTable;
 export const chapterContent = chaptersContentTable;
 
+export const chaptersExample = exampleChaptersTable;
+export const chapterContentExample = exampleChaptersContentTable;
+
 export const schema = {
   user,
   session,
@@ -45,5 +53,7 @@ export const schema = {
   statusEnum,
   content,
   chapters,
-  chapterContent
+  chapterContent,
+  chaptersExample,
+  chapterContentExample,
 }

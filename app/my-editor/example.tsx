@@ -14,6 +14,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { savePageData } from "./saveToDB";
+import { v4 as uuidv4 } from "uuid";
 
 const jsondata = [
     {
@@ -26,13 +28,12 @@ const jsondata = [
         heading: "Priya Singh",
         content: "My sister is Priya Singh",
     }
-]
+];
 
-export function GeneratedForm({ id }: { id: string }) {
+export function GeneratedForm({ id, heading, email, author }: { id: string; heading: string; email: string; author: string }) {
     const formSchema = z.object({ "textarea-0": z.string() });
 
     let value = "Default value";
-
     for (let i = 0; i < jsondata.length; i++) {
         if (jsondata[i].id === id) {
             value = jsondata[i].content;
@@ -51,8 +52,22 @@ export function GeneratedForm({ id }: { id: string }) {
         form.reset({ "textarea-0": newValue });
     }, [id, form]);
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log(values);
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        try {
+            await savePageData({
+                id: id || uuidv4(),
+                chapterId: "", // let server action handle upsert
+                heading,
+                author,
+                email,
+                content: JSON.stringify(values["textarea-0"]),
+                parsed: values["textarea-0"],
+                date: new Date().toISOString(),
+            });
+            alert("Saved successfully!");
+        } catch (err: any) {
+            alert("Error saving: " + err.message);
+        }
     }
 
     function onReset() {
@@ -74,7 +89,6 @@ export function GeneratedForm({ id }: { id: string }) {
                         render={({ field }) => (
                             <FormItem className="col-span-12 col-start-auto flex self-end flex-col gap-2 space-y-0 items-start">
                                 <FormLabel className="flex shrink-0">Text Area</FormLabel>
-
                                 <div className="w-full">
                                     <FormControl>
                                         <Textarea
@@ -85,7 +99,6 @@ export function GeneratedForm({ id }: { id: string }) {
                                             {...field}
                                         />
                                     </FormControl>
-
                                     <FormMessage />
                                 </div>
                             </FormItem>
@@ -94,7 +107,6 @@ export function GeneratedForm({ id }: { id: string }) {
                     <Button
                         key="submit-button-0"
                         id="submit-button-0"
-                        name=""
                         className="w-full"
                         type="submit"
                         variant="default"
@@ -108,36 +120,40 @@ export function GeneratedForm({ id }: { id: string }) {
 }
 
 export function Example() {
-    const [thisContent, setThisContent] = useState("");
+    const [thisContent, setThisContent] = useState<string>("12345");
 
     return (
         <div className='mx-auto max-w-7xl p-4'>
-            <GeneratedForm id={thisContent} />
-            <div className='flex flex-col gap-2'>
-                {
-                    jsondata.map((value, index) => {
-                        return (
-                            <div key={index}>
-                                <Button
-                                    variant={'secondary'}
-                                    onClick={() => setThisContent(value.id)}
-                                    className='cursor-pointer'
-                                >
-                                    {value.heading}
-                                </Button>
-                            </div>
-                        )
-                    })
-                }
+            <GeneratedForm
+                id={thisContent}
+                heading="Demo Heading"
+                email="demo@example.com"
+                author="Demo Author"
+            />
+            <div className='flex flex-col gap-2 mt-4'>
                 <div>
                     <Button
                         variant={'default'}
                         className='cursor-pointer'
+                        onClick={() => setThisContent(uuidv4())} // new blank page
                     >
                         New
                     </Button>
                 </div>
+                {
+                    jsondata.map((value, index) => (
+                        <div key={index}>
+                            <Button
+                                variant={'secondary'}
+                                onClick={() => setThisContent(value.id)}
+                                className='cursor-pointer'
+                            >
+                                {value.heading}
+                            </Button>
+                        </div>
+                    ))
+                }
             </div>
         </div>
-    )
+    );
 }
