@@ -33,9 +33,6 @@ import '@blocknote/xl-ai/style.css';
 import { en as aiEn } from '@blocknote/xl-ai/locales';
 
 import React from 'react'
-import { Button } from '@/components/ui/button';
-import { Tag } from 'tagmento';
-import { useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid';
 
 // import { savePageData } from "./saveToDB"
