@@ -20,7 +20,7 @@ export default async function DashboardPage() {
         <div className="flex gap-4 items-center justify-center h-[100vh]">
             <Background />
             <div className="text-center">
-                <h1 className="text-3xl text-shadow-background/50 text-shadow-md">Welcome! {session.user.name}</h1>
+                <h1 className="text-3xl text-shadow-background/10 text-shadow-2xs">Welcome! {session.user.name}</h1>
                 <div className="flex gap-2 p-4 justify-center">
                     <LogoutButton />
                     <Button asChild>
