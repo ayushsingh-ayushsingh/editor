@@ -10,10 +10,8 @@ import { useMemo } from "react";
 import debounce from 'lodash.debounce';
 
 import { createGroq } from '@ai-sdk/groq';
-import { createGoogle } from '@ai-sdk/google';
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
-import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
 import "./styles.css";
 import {
@@ -50,7 +48,7 @@ const pageDataSchema = z.object({
 
 const model = createGroq({
     apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-})('llama-3.3-70b-versatile');
+})('meta-llama/llama-4-scout-17b-16e-instruct');
 
 interface EditorProps {
     userName: string;
@@ -156,7 +154,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
             placeholders: {
                 ...locale.placeholders,
                 emptyDocument: "Render your thoughts here...",
-                default: "Type...",
+                default: "...",
                 heading: "Heading",
             },
             ai: aiEn
@@ -253,7 +251,8 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                         theme="light"
                         editor={editor}
                         onChange={debouncedHandleChange}
-                        data-theming-css-variables-demo
+                        data-theming-css-variables
+                        data-changing-font
                     >
                         <AIMenuController />
                         <FormattingToolbarWithAI />
@@ -261,9 +260,6 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                     </BlockNoteView>
                 </div>
             </div>
-            <pre>
-                {JSON.stringify(blocks, null, 2)}
-            </pre>
         </div>
     );
 }
