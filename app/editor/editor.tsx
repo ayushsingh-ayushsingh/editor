@@ -5,6 +5,7 @@ import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
 import { useState } from "react";
 import { toast } from "sonner";
+import { codeBlock } from "@blocknote/code-block";
 
 import { useMemo } from "react";
 import debounce from 'lodash.debounce';
@@ -13,6 +14,7 @@ import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import "./styles.css";
+import "./codeStyles.css"
 import {
     FormattingToolbar,
     FormattingToolbarController,
@@ -148,6 +150,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
     });
 
     const editor = useCreateBlockNote({
+        codeBlock,
         initialContent: blocks,
         dictionary: {
             ...locale,
@@ -155,7 +158,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                 ...locale.placeholders,
                 emptyDocument: "Render your thoughts here...",
                 default: "...",
-                heading: "Heading",
+                heading: "...heading",
             },
             ai: aiEn
         },
