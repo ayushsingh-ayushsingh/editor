@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { useMemo } from "react";
 import debounce from 'lodash.debounce';
 
-import { createGroq } from '@ai-sdk/groq';
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
@@ -33,6 +32,7 @@ import { en as aiEn } from '@blocknote/xl-ai/locales';
 
 import React from 'react'
 import { v4 as uuidv4 } from 'uuid';
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 // import { savePageData } from "./saveToDB"
 import { z } from "zod";
@@ -46,9 +46,9 @@ const pageDataSchema = z.object({
     date: z.string(),
 });
 
-const model = createGroq({
-    apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-})('meta-llama/llama-4-scout-17b-16e-instruct');
+const model = createGoogleGenerativeAI({
+    apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+})("gemini-1.5-flash");
 
 interface EditorProps {
     userName: string;
@@ -253,6 +253,8 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                         onChange={debouncedHandleChange}
                         data-theming-css-variables
                         data-changing-font
+                        formattingToolbar={false}
+                        slashMenu={false}
                     >
                         <AIMenuController />
                         <FormattingToolbarWithAI />
