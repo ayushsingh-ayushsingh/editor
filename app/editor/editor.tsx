@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import debounce from 'lodash.debounce';
 
 import { createGroq } from '@ai-sdk/groq';
+import { createGoogle } from '@ai-sdk/google';
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
