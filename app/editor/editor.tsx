@@ -155,8 +155,8 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
             placeholders: {
                 ...locale.placeholders,
                 emptyDocument: "Render your thoughts here...",
-                default: "Type here...",
-                heading: "First Heading",
+                default: "Type...",
+                heading: "Heading",
             },
             ai: aiEn
         },
@@ -190,7 +190,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                             if (item.type === "text") {
                                 return item.text;
                             }
-                            return ""; // You can expand this for links, mentions, etc.
+                            return "";
                         })
                         .join("")
                         .trim();
@@ -198,7 +198,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                 return "";
             })
             .filter(Boolean)
-            .join("\n\n"); // double line break between blocks
+            .join("\n\n");
     }
 
     const [parsedContent, setParsedContent] = useState(() => {
@@ -244,14 +244,6 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
 
     return (
         <div className="max-w-5xl w-full mx-auto">
-            <div className='w-full'>
-                <a
-                    href="#text-editor"
-                    className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 text-white z-50"
-                >
-                    Start work
-                </a>
-            </div>
             <div className='min-h-[80vh] mb-8' id="text-editor">
                 <div className="max-w-5xl mx-auto">
                     <BlockNoteView
@@ -268,6 +260,9 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                     </BlockNoteView>
                 </div>
             </div>
+            <pre>
+                {JSON.stringify(blocks, null, 2)}
+            </pre>
         </div>
     );
 }
