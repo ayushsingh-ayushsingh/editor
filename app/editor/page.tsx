@@ -1,4 +1,4 @@
-import { Editor } from "./dynamicEditor";
+import ApiDialogTextEditor from "./apiDialog";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,7 +14,7 @@ export default async function Page() {
 
     return (
         <div className="my-6">
-            <Editor userName={session.user.name} userEmail={session.user.email} />
+            <ApiDialogTextEditor userEmail={session.user.email} userName={session.user.name} />
         </div>
     )
 }

@@ -3,9 +3,23 @@
 import { Block } from "@blocknote/core";
 import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
+import { ChevronUp, Trash2 } from "lucide-react";
+import { createNewBlog } from "./saveUsersBlog";
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 import { useMemo } from "react";
 import debounce from 'lodash.debounce';
@@ -36,9 +50,25 @@ import React from 'react'
 import { v4 as uuidv4 } from 'uuid';
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-// import { savePageData } from "./saveToDB"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+import { extractPlainTextFromBlocks } from "./initialBlock";
+
 import { z } from "zod";
 import { initialBlocks } from "./initialBlock";
+
+import { Button } from "@/components/ui/button"
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "@/components/ui/drawer"
+import { getBlogsByEmail, deleteBlogById } from "./getUsersBlogs";
 
 const pageDataSchema = z.object({
     id: z.string().uuid(),
@@ -49,16 +79,45 @@ const pageDataSchema = z.object({
     date: z.string(),
 });
 
-const model = createGoogleGenerativeAI({
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
-})("gemini-2.5-flash");
-
 interface EditorProps {
     userName: string;
     userEmail: string;
+    googleApiKey: string;
 }
 
-export default function Editor({ userName, userEmail }: EditorProps) {
+function FormattingToolbarWithAI() {
+    return (
+        <FormattingToolbarController
+            formattingToolbar={() => (
+                <FormattingToolbar>
+                    {...getFormattingToolbarItems()}
+                    <AIToolbarButton />
+                </FormattingToolbar>
+            )}
+        />
+    );
+}
+
+function SuggestionMenuWithAI(props: {
+    editor: BlockNoteEditor<any, any, any>;
+}) {
+    return (
+        <SuggestionMenuController
+            triggerCharacter="/"
+            getItems={async (query) =>
+                filterSuggestionItems(
+                    [
+                        ...getDefaultReactSlashMenuItems(props.editor),
+                        ...getAISlashMenuItems(props.editor),
+                    ],
+                    query
+                )
+            }
+        />
+    );
+}
+
+export default function Editor({ userName, userEmail, googleApiKey }: EditorProps) {
     // Page content
 
     const locale = en;
@@ -92,7 +151,10 @@ export default function Editor({ userName, userEmail }: EditorProps) {
         uploadFile,
         extensions: [
             createAIExtension({
-                model,
+                model: createGoogleGenerativeAI({
+                    // apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+                    apiKey: googleApiKey || "",
+                })("gemini-2.5-flash"),
             }),
         ],
     });
@@ -106,29 +168,11 @@ export default function Editor({ userName, userEmail }: EditorProps) {
 
         localStorage.setItem("pageContent", JSON.stringify(currentContent));
         localStorage.setItem("parsedContent", plainText);
+
+
     }, 1000), [editor]);
 
     // Parsed Content
-
-    function extractPlainTextFromBlocks(blocks: Block[]): string {
-        return blocks
-            .map((block) => {
-                if (Array.isArray(block.content)) {
-                    return block.content
-                        .map((item) => {
-                            if (item.type === "text") {
-                                return item.text;
-                            }
-                            return "";
-                        })
-                        .join("")
-                        .trim();
-                }
-                return "";
-            })
-            .filter(Boolean)
-            .join("\n\n");
-    }
 
     const [parsedContent, setParsedContent] = useState(() => {
         if (typeof window !== "undefined") {
@@ -171,6 +215,18 @@ export default function Editor({ userName, userEmail }: EditorProps) {
         }
     };
 
+    const [blogsList, setblogsList] = useState<any[]>([]);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    async function fetchBlogs() {
+        const list = await getBlogsByEmail(userEmail);
+        setblogsList(list);
+    }
+
+    useEffect(() => {
+        fetchBlogs();
+    }, [userEmail]);
+
     return (
         <div className="max-w-5xl w-full mx-auto">
             <div className='min-h-[80vh] mb-8'>
@@ -194,38 +250,98 @@ export default function Editor({ userName, userEmail }: EditorProps) {
                     </div>
                 </div>
             </div>
-        </div>
-    );
-}
+            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                <DrawerTrigger asChild>
+                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent">
+                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5" />
+                    </span>
+                </DrawerTrigger>
+                <DrawerContent
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                    <DrawerHeader>
+                        <DrawerTitle>Your Creations, {userName}</DrawerTitle>
+                        <DrawerDescription>This action cannot be undone.</DrawerDescription>
+                        <ScrollArea className="h-[33vh] max-w-md w-full mx-auto rounded-md">
+                            <div className="px-4">
+                                {blogsList.map((blog, index) => (
+                                    <div key={index} className="border-b -ml-2">
+                                        <div className="max-w-md w-full flex items-center gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
+                                            <Button
+                                                variant="ghost"
+                                                className="flex-1 justify-start font-medium text-sm sm:text-base truncate"
+                                                title={blog.heading}
+                                                onClick={() => setIsDrawerOpen(false)}
+                                            >
+                                                {blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1)}
+                                            </Button>
 
-function FormattingToolbarWithAI() {
-    return (
-        <FormattingToolbarController
-            formattingToolbar={() => (
-                <FormattingToolbar>
-                    {...getFormattingToolbarItems()}
-                    <AIToolbarButton />
-                </FormattingToolbar>
-            )}
-        />
-    );
-}
-
-function SuggestionMenuWithAI(props: {
-    editor: BlockNoteEditor<any, any, any>;
-}) {
-    return (
-        <SuggestionMenuController
-            triggerCharacter="/"
-            getItems={async (query) =>
-                filterSuggestionItems(
-                    [
-                        ...getDefaultReactSlashMenuItems(props.editor),
-                        ...getAISlashMenuItems(props.editor),
-                    ],
-                    query
-                )
-            }
-        />
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="shrink-0 dark:hover:bg-card/80 mr-0.2 hover:bg-card/80"
+                                                    >
+                                                        <Trash2 className="text-destructive w-4 h-4 sm:w-5 sm:h-5" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete the chapter - <span className="underline underline-offset-2">{blog.heading}</span> and remove its data from our servers.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={async () => {
+                                                                const res = await deleteBlogById(blog.id);
+                                                                fetchBlogs();
+                                                                res.success
+                                                                    ? toast.success(res.message)
+                                                                    : toast.error(res.message);
+                                                            }}
+                                                        >
+                                                            Continue
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </DrawerHeader>
+                    <DrawerFooter>
+                        <div className="max-w-md w-full mx-auto space-y-2">
+                            <Button
+                                className="max-w-md w-full p-5"
+                                onClick={async () => {
+                                    const res = await createNewBlog(userEmail, userName);
+                                    fetchBlogs();
+                                    res.success
+                                        ? toast.success(res.message)
+                                        : toast.error(res.message);
+                                    setIsDrawerOpen(false);
+                                }}
+                            >
+                                Craft New Chapter
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="max-w-md w-full p-5"
+                                onClick={() => setIsDrawerOpen(false)}
+                            >
+                                Close Drawer
+                            </Button>
+                        </div>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
+        </div >
     );
 }

@@ -1,10 +1,10 @@
 /* HIDE THE LANGUAGE DROPDOWN COMPLETELY */
-/* .bn-container[data-theming-css-variables] .bn-block-content[data-content-type="codeBlock"] select,
+.bn-container[data-theming-css-variables] .bn-block-content[data-content-type="codeBlock"] select,
 .bn-container[data-theming-css-variables] .bn-block-content[data-content-type="codeBlock"] .bn-language-selector,
 .bn-container[data-theming-css-variables] div[data-content-type="codeBlock"]>div:first-child {
     display: none !important;
     visibility: hidden !important;
-} */
+}
 
 /* Custom selection color inside code blocks */
 .bn-container[data-theming-css-variables] .bn-block-content[data-content-type="codeBlock"] ::selection {

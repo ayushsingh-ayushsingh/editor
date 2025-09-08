@@ -15,7 +15,7 @@ export const usersBlogs = pgTable("users_blogs", {
 
 export const blog = pgTable("blog", {
   id: uuid("id").primaryKey(),
-  userBlogId: uuid("user_blog_id").references(() => usersBlogs.id),
+  userBlogId: uuid("user_blog_id").references(() => usersBlogs.id, { onDelete: 'cascade' }),
   author: text("author").notNull(),
   email: text("email").notNull(),
   heading: text("heading").notNull(),
