@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import debounce from 'lodash.debounce';
 
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
-import { BlockNoteView } from '@blocknote/mantine';
+import { BlockNoteView } from "@blocknote/mantine";
 import '@blocknote/mantine/style.css';
 import "./styles.css";
 import "./codeStyles.css"
@@ -38,6 +38,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 // import { savePageData } from "./saveToDB"
 import { z } from "zod";
+import { initialBlocks } from "./initialBlock";
 
 const pageDataSchema = z.object({
     id: z.string().uuid(),
@@ -50,91 +51,17 @@ const pageDataSchema = z.object({
 
 const model = createGoogleGenerativeAI({
     apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
-})("gemini-1.5-flash");
+})("gemini-2.5-flash");
 
 interface EditorProps {
     userName: string;
     userEmail: string;
-    content?: string;
 }
 
-export default function Editor({ userName, userEmail, content }: EditorProps) {
+export default function Editor({ userName, userEmail }: EditorProps) {
     // Page content
 
     const locale = en;
-
-    const storedContent = typeof window !== "undefined"
-        ? localStorage.getItem("pageContent")
-        : null;
-
-    const initialBlocks: Block[] = storedContent
-        ? JSON.parse(storedContent)
-        : [
-            {
-                id: "fc62cb59-99a9-435e-b6b7-84af6fe7e4eb",
-                type: "paragraph",
-                props: {
-                    textColor: "default",
-                    backgroundColor: "default",
-                    textAlignment: "left",
-                },
-                content: [
-                    {
-                        type: "text",
-                        text: "Welcome to this demo! this is the new text...",
-                        styles: {},
-                    },
-                ],
-                children: [],
-            },
-            {
-                id: "7735f8e9-87cb-4af7-bbac-c62cc9aac008",
-                type: "heading",
-                props: {
-                    textColor: "default",
-                    backgroundColor: "default",
-                    textAlignment: "left",
-                    level: 1,
-                    isToggleable: false,
-                },
-                content: [
-                    {
-                        type: "text",
-                        text: "This is a heading block",
-                        styles: {},
-                    },
-                ],
-                children: [],
-            },
-            {
-                id: "a0087c26-b919-4f6a-b5e1-dd52fd85cb05",
-                type: "paragraph",
-                props: {
-                    textColor: "default",
-                    backgroundColor: "default",
-                    textAlignment: "left",
-                },
-                content: [
-                    {
-                        type: "text",
-                        text: "This is a paragraph block",
-                        styles: {},
-                    },
-                ],
-                children: [],
-            },
-            {
-                id: "5f1bbe0e-fcab-4174-a1d6-a3bcd86e7a38",
-                type: "paragraph",
-                props: {
-                    textColor: "default",
-                    backgroundColor: "default",
-                    textAlignment: "left",
-                },
-                content: [],
-                children: [],
-            },
-        ];
 
     const [blocks, setBlocks] = useState<Block[]>(() => {
         try {
@@ -158,7 +85,7 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
                 ...locale.placeholders,
                 emptyDocument: "Render your thoughts here...",
                 default: "...",
-                heading: "...heading",
+                heading: "...",
             },
             ai: aiEn
         },
@@ -246,23 +173,25 @@ export default function Editor({ userName, userEmail, content }: EditorProps) {
 
     return (
         <div className="max-w-5xl w-full mx-auto">
-            <div className='min-h-[80vh] mb-8' id="text-editor">
-                <div className="max-w-5xl mx-auto">
-                    <BlockNoteView
-                        className="pr-2 pl-0 py-4"
-                        spellCheck="false"
-                        theme="light"
-                        editor={editor}
-                        onChange={debouncedHandleChange}
-                        data-theming-css-variables
-                        data-changing-font
-                        formattingToolbar={false}
-                        slashMenu={false}
-                    >
-                        <AIMenuController />
-                        <FormattingToolbarWithAI />
-                        <SuggestionMenuWithAI editor={editor} />
-                    </BlockNoteView>
+            <div className='min-h-[80vh] mb-8'>
+                <div className="max-w-5xl mx-auto pb-[33vh]">
+                    <div className="overflow-x-hidden">
+                        <BlockNoteView
+                            className="pl-0 py-4 -mx-10"
+                            spellCheck="false"
+                            theme="light"
+                            editor={editor}
+                            onChange={debouncedHandleChange}
+                            data-theming-css-variables
+                            data-changing-font
+                            formattingToolbar={false}
+                            slashMenu={false}
+                        >
+                            <AIMenuController />
+                            <FormattingToolbarWithAI />
+                            <SuggestionMenuWithAI editor={editor} />
+                        </BlockNoteView>
+                    </div>
                 </div>
             </div>
         </div>

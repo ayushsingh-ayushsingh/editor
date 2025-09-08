@@ -44,3 +44,7 @@
 .bn-container[data-changing-font] .bn-editor * {
   font-family: var(--font-custom);
 }
+
+.bn-container[data-theming-css-variables] input[type="checkbox"] {
+  accent-color: var(--color-primary) !important;
+}
