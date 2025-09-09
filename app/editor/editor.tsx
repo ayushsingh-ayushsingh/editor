@@ -6,8 +6,14 @@ import uploadFile from "./uploadFile";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
-import { ChevronUp, Trash2 } from "lucide-react";
-import { createNewBlog } from "./saveUsersBlog";
+import { ChevronUp, Trash2, CircleX, CircleCheck } from "lucide-react";
+import { createNewBlog, updateBlogById } from "./actions/saveUsersBlog";
+
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 import {
     AlertDialog,
@@ -27,8 +33,8 @@ import debounce from 'lodash.debounce';
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from "@blocknote/mantine";
 import '@blocknote/mantine/style.css';
-import "./styles.css";
-import "./codeStyles.css"
+import "./css/styles.css";
+import "./css/codeStyles.css"
 import {
     FormattingToolbar,
     FormattingToolbarController,
@@ -47,20 +53,17 @@ import '@blocknote/xl-ai/style.css';
 import { en as aiEn } from '@blocknote/xl-ai/locales';
 
 import React from 'react'
-import { v4 as uuidv4 } from 'uuid';
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import { extractPlainTextFromBlocks } from "./initialBlock";
 
-import { z } from "zod";
 import { initialBlocks } from "./initialBlock";
 
 import { Button } from "@/components/ui/button"
 import {
     Drawer,
-    DrawerClose,
     DrawerContent,
     DrawerDescription,
     DrawerFooter,
@@ -68,16 +71,9 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer"
-import { getBlogsByEmail, deleteBlogById } from "./getUsersBlogs";
-
-const pageDataSchema = z.object({
-    id: z.string().uuid(),
-    author: z.string().min(1, "Author Not Found"),
-    email: z.string().email("Email Address Not Found"),
-    content: z.array(z.any()),
-    parsedContent: z.string().min(10, "Write atleast 10 characters"),
-    date: z.string(),
-});
+import { getBlogsByEmail, deleteBlogById } from "./actions/getUsersBlogs";
+import { getBlogById } from "./actions/getBlogById";
+import { useRouter } from "next/router";
 
 interface EditorProps {
     userName: string;
@@ -122,6 +118,8 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
 
     const locale = en;
 
+    const [id, setId] = useState(localStorage.getItem("id"));
+
     const [blocks, setBlocks] = useState<Block[]>(() => {
         try {
             if (typeof window !== "undefined") {
@@ -159,19 +157,6 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         ],
     });
 
-    const debouncedHandleChange = useMemo(() => debounce(() => {
-        const currentContent = editor.document;
-        setBlocks(currentContent);
-
-        const plainText = extractPlainTextFromBlocks(currentContent);
-        setParsedContent(plainText);
-
-        localStorage.setItem("pageContent", JSON.stringify(currentContent));
-        localStorage.setItem("parsedContent", plainText);
-
-
-    }, 1000), [editor]);
-
     // Parsed Content
 
     const [parsedContent, setParsedContent] = useState(() => {
@@ -181,39 +166,38 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         return "";
     });
 
-    // Final data to be stored
+    async function updateBlog(id: string, content: string, parsed: string) {
+        const res = await updateBlogById(id, content, parsed);
+        res.success
+            ? toast.success(res.message)
+            : toast.error(res.message);
+    }
 
-    const [pageId] = useState(() => uuidv4());
+    const debouncedHandleChange = useMemo(() =>
+        debounce(async () => {
+            const currentContent = editor.document;
 
-    const pageData = {
-        id: pageId,
-        author: userName,
-        email: userEmail,
-        content: blocks,
-        parsedContent,
-        date: new Date().toISOString(),
-    };
+            const currentString = JSON.stringify(currentContent);
+            const lastString = localStorage.getItem("pageContent");
 
-    // Save to Database
+            if (lastString === currentString) return;
 
-    const handleSave = async () => {
-        try {
-            // Validate data
-            pageDataSchema.parse(pageData);
+            setBlocks(currentContent);
 
-            // If validation passes, save
-            // const response = await savePageData(pageData);
-            toast.success("Article saved successfully!");
-            // console.log("Saved:", response);
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                error.errors.forEach(({ message }) => toast.error(message));
-            } else {
-                toast.error("Failed to save article.");
-                console.error(error);
+            const plainText = extractPlainTextFromBlocks(currentContent);
+            setParsedContent(plainText);
+
+            localStorage.setItem("pageContent", currentString);
+            localStorage.setItem("parsedContent", plainText);
+
+            if (!id) {
+                toast.error("Cannot get blog id");
+                return;
             }
-        }
-    };
+
+            await updateBlog(id, currentString, plainText);
+        }, 5000), [editor, id]
+    );
 
     const [blogsList, setblogsList] = useState<any[]>([]);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -227,8 +211,59 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         fetchBlogs();
     }, [userEmail]);
 
+    useEffect(() => {
+        if (editor && blocks.length > 0) {
+            editor.replaceBlocks(editor.document, blocks);
+        }
+    }, [blocks, editor]);
+
+    async function handleGetBlogById(id: string) {
+        setIsDrawerOpen(false);
+        const res = await getBlogById(id);
+
+        console.log(res);
+
+        res.success
+            ? toast.success(res.message)
+            : toast.error(res.message);
+
+        const resBlog = res.blog;
+        const stored = resBlog?.content;
+        const parsed = stored ? JSON.parse(stored) : null;
+
+        const currentContent = Array.isArray(parsed) ? parsed : initialBlocks;
+        const plainText = extractPlainTextFromBlocks(currentContent);
+
+        localStorage.setItem("pageContent", JSON.stringify(currentContent));
+        localStorage.setItem("parsedContent", plainText);
+
+        setParsedContent(plainText);
+        setBlocks(currentContent);
+
+        localStorage.setItem("id", id);
+        setId(id);
+    }
+
     return (
         <div className="max-w-5xl w-full mx-auto">
+            <span className="fixed top-2 right-2 text-xs">
+                <Tooltip>
+                    <TooltipTrigger>
+                        <CircleCheck />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Saved</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger>
+                        <CircleX />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Saving</p>
+                    </TooltipContent>
+                </Tooltip>
+            </span>
             <div className='min-h-[80vh] mb-8'>
                 <div className="max-w-5xl mx-auto pb-[33vh]">
                     <div className="overflow-x-hidden">
@@ -264,55 +299,70 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                         <DrawerTitle>Your Creations, {userName}</DrawerTitle>
                         <DrawerDescription>This action cannot be undone.</DrawerDescription>
                         <ScrollArea className="h-[33vh] max-w-md w-full mx-auto rounded-md">
-                            <div className="px-4">
-                                {blogsList.map((blog, index) => (
-                                    <div key={index} className="border-b -ml-2">
-                                        <div className="max-w-md w-full flex items-center gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
-                                            <Button
-                                                variant="ghost"
-                                                className="flex-1 justify-start font-medium text-sm sm:text-base truncate"
-                                                title={blog.heading}
-                                                onClick={() => setIsDrawerOpen(false)}
-                                            >
-                                                {blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1)}
-                                            </Button>
+                            <div className="px-4 flex-col">
+                                {
+                                    blogsList.map((blog, index) => (
+                                        <div key={index} className="-ml-2">
+                                            <div className="max-w-md w-full flex items-center gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
+                                                <Button
+                                                    variant="ghost"
+                                                    className={`flex-1 justify-start font-medium text-sm sm:text-base truncate
+                                                    ${blog.id === id ? "underline text-accent-foreground underline-offset-2" : ""}`}
+                                                    title={blog.heading}
+                                                    onClick={() => {
+                                                        handleGetBlogById(blog.id);
+                                                    }}
+                                                >
+                                                    {blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1)}
+                                                </Button>
 
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="shrink-0 dark:hover:bg-card/80 mr-0.2 hover:bg-card/80"
-                                                    >
-                                                        <Trash2 className="text-destructive w-4 h-4 sm:w-5 sm:h-5" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently delete the chapter - <span className="underline underline-offset-2">{blog.heading}</span> and remove its data from our servers.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction
-                                                            onClick={async () => {
-                                                                const res = await deleteBlogById(blog.id);
-                                                                fetchBlogs();
-                                                                res.success
-                                                                    ? toast.success(res.message)
-                                                                    : toast.error(res.message);
-                                                            }}
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="shrink-0 dark:hover:bg-card/80 mr-0.2 hover:bg-card/80"
                                                         >
-                                                            Continue
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </div>
-                                ))}
+                                                            <Trash2 className="text-destructive w-4 h-4 sm:w-5 sm:h-5" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action cannot be undone. This will permanently delete the chapter - <span className="underline underline-offset-2">{blog.heading}</span> and remove its data from our servers.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={async () => {
+                                                                    const res = await deleteBlogById(blog.id);
+                                                                    fetchBlogs();
+                                                                    res.success
+                                                                        ? toast.success(res.message)
+                                                                        : toast.error(res.message);
+                                                                }}
+                                                            >
+                                                                Continue
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </div>)
+                                    )
+                                }
+                                <div className="h-[20vh] flex justify-center items-end text-muted-foreground">
+                                    {blogsList.length == 0 ?
+                                        "You have not created any chapter...!"
+                                        :
+                                        blogsList.length == 1 ?
+                                            `You have created a single chapter.`
+                                            :
+                                            `You have ${blogsList.length} creations`
+                                    }
+                                </div>
                             </div>
                         </ScrollArea>
                     </DrawerHeader>
@@ -327,6 +377,8 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                                         ? toast.success(res.message)
                                         : toast.error(res.message);
                                     setIsDrawerOpen(false);
+                                    localStorage.setItem("id", res.newBlogId || "");
+                                    setId(res.newBlogId || "");
                                 }}
                             >
                                 Craft New Chapter

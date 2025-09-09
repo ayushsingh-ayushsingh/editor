@@ -15,14 +15,14 @@ export const usersBlogs = pgTable("users_blogs", {
 
 export const blog = pgTable("blog", {
   id: uuid("id").primaryKey(),
-  userBlogId: uuid("user_blog_id").references(() => usersBlogs.id, { onDelete: 'cascade' }),
+  userBlogId: uuid("user_blog_id").references(() => usersBlogs.id, { onDelete: 'cascade' }).notNull(),
   author: text("author").notNull(),
   email: text("email").notNull(),
   heading: text("heading").notNull(),
   content: text("content").notNull(),
   parsed: text("parsed").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const authSchema = { blog, usersBlogs };

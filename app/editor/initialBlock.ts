@@ -4,7 +4,7 @@ export const storedContent = typeof window !== "undefined"
     ? localStorage.getItem("pageContent")
     : null;
 
-export const content = [
+export const content: Block[] = [
     {
         id: "fc62cb59-99a9-435e-b6b7-84af6fe7e4eb",
         type: "paragraph",
@@ -94,3 +94,5 @@ export function extractPlainTextFromBlocks(blocks: Block[]): string {
         .filter(Boolean)
         .join("\n\n");
 }
+
+export const parsedContent = extractPlainTextFromBlocks(content);
