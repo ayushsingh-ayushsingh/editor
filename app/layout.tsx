@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Providers } from "./providers";
 
 const custom = Geist_Mono({
   variable: "--font-custom",
@@ -33,9 +34,11 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
-          <ModeToggle />
+          <Providers>
+            {children}
+            <Toaster />
+            <ModeToggle />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

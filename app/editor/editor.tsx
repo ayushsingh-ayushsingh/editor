@@ -6,7 +6,7 @@ import uploadFile from "./uploadFile";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
-import { ChevronUp, Trash2, CircleX, CircleCheck } from "lucide-react";
+import { ChevronUp, Trash2, CircleX, CircleCheck, LoaderCircle } from "lucide-react";
 import { createNewBlog, updateBlogById } from "./actions/saveUsersBlog";
 
 import {
@@ -118,7 +118,22 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
 
     const locale = en;
 
-    const [id, setId] = useState(localStorage.getItem("id"));
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [id, setId] = useState<string | null>(null);
+
+    const lastSavedRef = React.useRef<string>("");
+
+    useEffect(() => {
+        const initialId = typeof window !== "undefined" ? localStorage.getItem("id") : null;
+        setId(initialId);
+    }, []);
+
+    useEffect(() => {
+        if (saveStatus === "saved") {
+            const t = setTimeout(() => setSaveStatus("idle"), 3500);
+            return () => clearTimeout(t);
+        }
+    }, [saveStatus]);
 
     const [blocks, setBlocks] = useState<Block[]>(() => {
         try {
@@ -132,6 +147,13 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         }
         return initialBlocks;
     });
+
+    useEffect(() => {
+        if (blocks.length > 0) {
+            lastSavedRef.current = JSON.stringify(blocks);
+            setSaveStatus("idle");
+        }
+    }, [blocks]);
 
     const editor = useCreateBlockNote({
         codeBlock,
@@ -166,38 +188,48 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         return "";
     });
 
-    async function updateBlog(id: string, content: string, parsed: string) {
-        const res = await updateBlogById(id, content, parsed);
-        res.success
-            ? toast.success(res.message)
-            : toast.error(res.message);
-    }
+    const debouncedHandleChange = useMemo(
+        () =>
+            debounce(async () => {
+                const currentContent = editor.document;
+                const currentString = JSON.stringify(currentContent);
 
-    const debouncedHandleChange = useMemo(() =>
-        debounce(async () => {
-            const currentContent = editor.document;
+                // no changes since last successful save
+                if (currentString === lastSavedRef.current) {
+                    setSaveStatus("idle");
+                    return;
+                }
 
-            const currentString = JSON.stringify(currentContent);
-            const lastString = localStorage.getItem("pageContent");
+                const plainText = extractPlainTextFromBlocks(currentContent);
 
-            if (lastString === currentString) return;
+                setBlocks(currentContent);
+                setParsedContent(plainText);
+                localStorage.setItem("pageContent", currentString);
+                localStorage.setItem("parsedContent", plainText);
 
-            setBlocks(currentContent);
+                if (!id) {
+                    setSaveStatus("idle");
+                    toast.error("Cannot get blog id");
+                    return;
+                }
 
-            const plainText = extractPlainTextFromBlocks(currentContent);
-            setParsedContent(plainText);
+                const res = await updateBlogById(id, currentString, plainText);
 
-            localStorage.setItem("pageContent", currentString);
-            localStorage.setItem("parsedContent", plainText);
-
-            if (!id) {
-                toast.error("Cannot get blog id");
-                return;
-            }
-
-            await updateBlog(id, currentString, plainText);
-        }, 5000), [editor, id]
+                if (res?.success) {
+                    lastSavedRef.current = currentString;
+                    setSaveStatus("saved");
+                    toast.success(res.message);
+                } else {
+                    setSaveStatus("idle");
+                    if (res?.message) toast.error(res.message);
+                }
+            }, 5000),
+        [editor, id]
     );
+
+    useEffect(() => {
+        return () => debouncedHandleChange.cancel();
+    }, [debouncedHandleChange]);
 
     const [blogsList, setblogsList] = useState<any[]>([]);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -214,6 +246,9 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
     useEffect(() => {
         if (editor && blocks.length > 0) {
             editor.replaceBlocks(editor.document, blocks);
+
+            lastSavedRef.current = JSON.stringify(blocks);
+            setSaveStatus("idle");
         }
     }, [blocks, editor]);
 
@@ -242,27 +277,32 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
 
         localStorage.setItem("id", id);
         setId(id);
+
+        lastSavedRef.current = JSON.stringify(currentContent);
+        setSaveStatus("idle");
     }
 
     return (
         <div className="max-w-5xl w-full mx-auto">
             <span className="fixed top-2 right-2 text-xs">
-                <Tooltip>
-                    <TooltipTrigger>
-                        <CircleCheck />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Saved</p>
-                    </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger>
-                        <CircleX />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Saving</p>
-                    </TooltipContent>
-                </Tooltip>
+                <span className="fixed top-2 right-2 text-xs">
+                    {saveStatus === "saving" && (
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <LoaderCircle className="animate-spin" size={16} />
+                            </TooltipTrigger>
+                            <TooltipContent><p>Saving...</p></TooltipContent>
+                        </Tooltip>
+                    )}
+                    {saveStatus === "saved" && (
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <CircleCheck className="text-primary" size={16} />
+                            </TooltipTrigger>
+                            <TooltipContent><p>Saved</p></TooltipContent>
+                        </Tooltip>
+                    )}
+                </span>
             </span>
             <div className='min-h-[80vh] mb-8'>
                 <div className="max-w-5xl mx-auto pb-[33vh]">
@@ -272,7 +312,13 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                             spellCheck="false"
                             theme="light"
                             editor={editor}
-                            onChange={debouncedHandleChange}
+                            onChange={() => {
+                                const currentString = JSON.stringify(editor.document);
+                                if (currentString !== lastSavedRef.current) {
+                                    if (saveStatus !== "saving") setSaveStatus("saving");
+                                    debouncedHandleChange();
+                                }
+                            }}
                             data-theming-css-variables
                             data-changing-font
                             formattingToolbar={false}
