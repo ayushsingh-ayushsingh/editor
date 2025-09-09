@@ -1,91 +1,87 @@
 import { Block } from "@blocknote/core";
+import quotes from "./actions/quotes.json" assert { type: "json" };
 
-export const storedContent = typeof window !== "undefined"
-    ? localStorage.getItem("pageContent")
-    : null;
+export function getInitialContent(): Block[] {
+    const q = quotes[Math.floor(Math.random() * quotes.length)];
 
-export const content: Block[] = [
-    {
-        id: "fc62cb59-99a9-435e-b6b7-84af6fe7e4eb",
-        type: "paragraph",
-        props: {
-            textColor: "default",
-            backgroundColor: "default",
-            textAlignment: "left",
-        },
-        content: [
-            {
-                type: "text",
-                text: "Welcome to this demo! this is the new text...",
-                styles: {},
+    return [
+        {
+            id: crypto.randomUUID(),
+            type: "heading",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
+                level: 1,
+                isToggleable: false,
             },
-        ],
-        children: [],
-    },
-    {
-        id: "7735f8e9-87cb-4af7-bbac-c62cc9aac008",
-        type: "heading",
-        props: {
-            textColor: "default",
-            backgroundColor: "default",
-            textAlignment: "left",
-            level: 1,
-            isToggleable: false,
+            content: [{ type: "text", text: q.author, styles: {} }],
+            children: [],
         },
-        content: [
-            {
-                type: "text",
-                text: "This is a heading block",
-                styles: {},
+        {
+            id: crypto.randomUUID(),
+            type: "paragraph",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
             },
-        ],
-        children: [],
-    },
-    {
-        id: "a0087c26-b919-4f6a-b5e1-dd52fd85cb05",
-        type: "paragraph",
-        props: {
-            textColor: "default",
-            backgroundColor: "default",
-            textAlignment: "left",
+            content: [],
+            children: [],
         },
-        content: [
-            {
-                type: "text",
-                text: "This is a paragraph block",
-                styles: {},
+        {
+            id: crypto.randomUUID(),
+            type: "paragraph",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
             },
-        ],
-        children: [],
-    },
-    {
-        id: "5f1bbe0e-fcab-4174-a1d6-a3bcd86e7a38",
-        type: "paragraph",
-        props: {
-            textColor: "default",
-            backgroundColor: "default",
-            textAlignment: "left",
+            content: [{ type: "text", text: q.text, styles: {} }],
+            children: [],
         },
-        content: [],
-        children: [],
-    },
-];
-
-export const initialBlocks: Block[] = storedContent
-    ? JSON.parse(storedContent)
-    : content;
+        {
+            id: crypto.randomUUID(),
+            type: "paragraph",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
+            },
+            content: [],
+            children: [],
+        },
+        {
+            id: crypto.randomUUID(),
+            type: "quote",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
+            },
+            content: [{ type: "text", text: "Press ctrl + s to save", styles: {} }],
+            children: [],
+        },
+        {
+            id: crypto.randomUUID(),
+            type: "paragraph",
+            props: {
+                textColor: "default",
+                backgroundColor: "default",
+                textAlignment: "left",
+            },
+            content: [],
+            children: [],
+        },
+    ];
+}
 
 export function extractPlainTextFromBlocks(blocks: Block[]): string {
     return blocks
         .map((block) => {
             if (Array.isArray(block.content)) {
                 return block.content
-                    .map((item) => {
-                        if (item.type === "text") {
-                            return item.text;
-                        }
-                        return "";
-                    })
+                    .map((item) => (item.type === "text" ? item.text : ""))
                     .join("")
                     .trim();
             }
@@ -94,5 +90,3 @@ export function extractPlainTextFromBlocks(blocks: Block[]): string {
         .filter(Boolean)
         .join("\n\n");
 }
-
-export const parsedContent = extractPlainTextFromBlocks(content);

@@ -6,7 +6,7 @@ import uploadFile from "./uploadFile";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
-import { ChevronUp, Trash2, CircleX, CircleCheck, LoaderCircle } from "lucide-react";
+import { ChevronUp, Trash2, CircleCheck, LoaderCircle } from "lucide-react";
 import { createNewBlog, updateBlogById } from "./actions/saveUsersBlog";
 
 import {
@@ -54,12 +54,9 @@ import { en as aiEn } from '@blocknote/xl-ai/locales';
 
 import React from 'react'
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import { extractPlainTextFromBlocks } from "./initialBlock";
-
-import { initialBlocks } from "./initialBlock";
+import { getInitialContent } from "./initialBlock";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -73,7 +70,6 @@ import {
 } from "@/components/ui/drawer"
 import { getBlogsByEmail, deleteBlogById } from "./actions/getUsersBlogs";
 import { getBlogById } from "./actions/getBlogById";
-import { useRouter } from "next/router";
 
 interface EditorProps {
     userName: string;
@@ -140,12 +136,12 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
             if (typeof window !== "undefined") {
                 const stored = localStorage.getItem("pageContent");
                 const parsed = stored ? JSON.parse(stored) : null;
-                return Array.isArray(parsed) ? parsed : initialBlocks;
+                return Array.isArray(parsed) ? parsed : getInitialContent();
             }
         } catch {
-            return initialBlocks;
+            return getInitialContent();
         }
-        return initialBlocks;
+        return getInitialContent();
     });
 
     useEffect(() => {
@@ -266,7 +262,7 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         const stored = resBlog?.content;
         const parsed = stored ? JSON.parse(stored) : null;
 
-        const currentContent = Array.isArray(parsed) ? parsed : initialBlocks;
+        const currentContent = Array.isArray(parsed) ? parsed : getInitialContent();
         const plainText = extractPlainTextFromBlocks(currentContent);
 
         localStorage.setItem("pageContent", JSON.stringify(currentContent));
@@ -281,6 +277,87 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         lastSavedRef.current = JSON.stringify(currentContent);
         setSaveStatus("idle");
     }
+
+    async function handleCreateNewBlog() {
+        setIsDrawerOpen(false);
+
+        const newBlogRes = await createNewBlog(userEmail, userName);
+
+        if (newBlogRes.success) {
+            const newBlogId = newBlogRes.newBlogId;
+            setId(newBlogId || "");
+            localStorage.setItem("id", newBlogId || "");
+
+            const res = await getBlogById(newBlogId!);
+            if (res.success && res.blog?.content) {
+                const stored = res.blog.content;
+                const parsed = stored ? JSON.parse(stored) : null;
+                const currentContent = Array.isArray(parsed) ? parsed : getInitialContent();
+
+                const plainText = extractPlainTextFromBlocks(currentContent);
+
+                setBlocks(currentContent);
+                setParsedContent(plainText);
+                localStorage.setItem("pageContent", JSON.stringify(currentContent));
+                localStorage.setItem("parsedContent", plainText);
+                lastSavedRef.current = JSON.stringify(currentContent);
+
+                toast.success("New blog created and content loaded!");
+            } else {
+                setBlocks(getInitialContent());
+                setParsedContent("");
+                lastSavedRef.current = JSON.stringify(getInitialContent());
+                localStorage.setItem("pageContent", JSON.stringify(getInitialContent()));
+                localStorage.setItem("parsedContent", "");
+                toast.success("New blog created!");
+            }
+        } else {
+            toast.error(newBlogRes.message);
+        }
+        fetchBlogs();
+    }
+
+    const hasCreatedInitialBlog = React.useRef(false);
+
+    useEffect(() => {
+        if (blogsList.length === 0 && !hasCreatedInitialBlog.current) {
+            hasCreatedInitialBlog.current = true;
+            (async () => {
+                await handleCreateNewBlog();
+            })();
+        }
+    }, [blogsList.length]);
+
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+
+                if (!id) {
+                    toast.error("No blog selected to save");
+                    return;
+                }
+
+                const currentContent = editor.document;
+                const currentString = JSON.stringify(currentContent);
+                const plainText = extractPlainTextFromBlocks(currentContent);
+
+                updateBlogById(id, currentString, plainText).then((res) => {
+                    if (res?.success) {
+                        lastSavedRef.current = currentString;
+                        setSaveStatus("saved");
+                        toast.success("Blog saved");
+                    } else {
+                        setSaveStatus("idle");
+                        toast.error(res?.message || "Failed to save blog");
+                    }
+                });
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [editor, id]);
 
     return (
         <div className="max-w-5xl w-full mx-auto">
@@ -384,10 +461,17 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                                                             <AlertDialogAction
                                                                 onClick={async () => {
                                                                     const res = await deleteBlogById(blog.id);
+                                                                    if (res.success) {
+                                                                        toast.success("Blog deleted successfully");
+                                                                        fetchBlogs();
+
+                                                                        if (blog.id === id) {
+                                                                            handleCreateNewBlog();
+                                                                        }
+                                                                    } else {
+                                                                        toast.error(res.message);
+                                                                    }
                                                                     fetchBlogs();
-                                                                    res.success
-                                                                        ? toast.success(res.message)
-                                                                        : toast.error(res.message);
                                                                 }}
                                                             >
                                                                 Continue
@@ -416,16 +500,7 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                         <div className="max-w-md w-full mx-auto space-y-2">
                             <Button
                                 className="max-w-md w-full p-5"
-                                onClick={async () => {
-                                    const res = await createNewBlog(userEmail, userName);
-                                    fetchBlogs();
-                                    res.success
-                                        ? toast.success(res.message)
-                                        : toast.error(res.message);
-                                    setIsDrawerOpen(false);
-                                    localStorage.setItem("id", res.newBlogId || "");
-                                    setId(res.newBlogId || "");
-                                }}
+                                onClick={async () => handleCreateNewBlog()}
                             >
                                 Craft New Chapter
                             </Button>

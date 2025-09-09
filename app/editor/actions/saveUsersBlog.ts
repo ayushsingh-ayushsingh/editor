@@ -4,9 +4,8 @@ import { db } from "@/db/drizzle";
 import { blog as blogContent, usersBlogs } from "@/db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { desc, eq } from "drizzle-orm";
-import { content } from "../initialBlock"
+import { getInitialContent, extractPlainTextFromBlocks } from "../initialBlock"
 import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
-import { parsedContent } from "../initialBlock";
 
 function randomName() {
     return uniqueNamesGenerator({
@@ -29,6 +28,8 @@ export async function createNewBlog(email: string, author: string) {
             heading,
         };
 
+        const content = getInitialContent();
+
         const newBlogContent: typeof blogContent.$inferInsert = {
             id: newContentId,
             userBlogId: newBlogId,
@@ -36,7 +37,7 @@ export async function createNewBlog(email: string, author: string) {
             email,
             heading,
             content: JSON.stringify(content),
-            parsed: parsedContent,
+            parsed: extractPlainTextFromBlocks(content),
         };
 
         await db.insert(usersBlogs).values(newUsersBlog);
