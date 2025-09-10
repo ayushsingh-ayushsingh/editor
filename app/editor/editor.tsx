@@ -135,7 +135,13 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         try {
             if (typeof window !== "undefined") {
                 const stored = localStorage.getItem("pageContent");
-                const parsed = stored ? JSON.parse(stored) : null;
+                let parsed: Block[] | null = null;
+                try {
+                    parsed = stored ? JSON.parse(stored) : null;
+                } catch (e) {
+                    console.error("Invalid JSON in blog content", stored);
+                    parsed = getInitialContent();
+                }
                 return Array.isArray(parsed) ? parsed : getInitialContent();
             }
         } catch {
@@ -184,33 +190,79 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         return "";
     });
 
+    const [heading, setHeading] = useState(() => {
+        return parsedContent && parsedContent.trim().length > 0
+            ? parsedContent.replace(/\s+/g, " ").trim().substring(0, 50)
+            : "Untitled";
+    });
+
+    const lastHeadingRef = React.useRef(heading);
+
+    function computeHeading(text: string) {
+        return text && text.trim().length > 0
+            ? text.replace(/\s+/g, " ").trim().substring(0, 50)
+            : "Untitled";
+    }
+
+    const debouncedHeadingUpdate = useMemo(
+        () =>
+            debounce(async (plainText: string, blogId: string) => {
+                const newHeading = computeHeading(plainText);
+
+                if (newHeading !== lastHeadingRef.current) {
+                    setHeading(newHeading);
+                    lastHeadingRef.current = newHeading;
+
+                    const res = await updateBlogById(blogId, newHeading, JSON.stringify(editor.document), plainText);
+                    if (res?.success) {
+                        fetchBlogs();
+                    }
+                }
+            }, 3000),
+        [editor]
+    );
+
+    useEffect(() => {
+        if (!id) return;
+        debouncedHeadingUpdate(parsedContent, id);
+    }, [parsedContent, id]);
+
+    useEffect(() => {
+        const newHeading =
+            parsedContent && parsedContent.trim().length > 0
+                ? parsedContent.replace(/\s+/g, " ").trim().substring(0, 50)
+                : "Untitled";
+
+        if (newHeading !== heading) {
+            setHeading(newHeading);
+        }
+    }, [parsedContent, heading]);
+
     const debouncedHandleChange = useMemo(
         () =>
             debounce(async () => {
                 const currentContent = editor.document;
                 const currentString = JSON.stringify(currentContent);
 
-                // no changes since last successful save
                 if (currentString === lastSavedRef.current) {
                     setSaveStatus("idle");
                     return;
                 }
 
                 const plainText = extractPlainTextFromBlocks(currentContent);
-
                 setBlocks(currentContent);
                 setParsedContent(plainText);
                 localStorage.setItem("pageContent", currentString);
                 localStorage.setItem("parsedContent", plainText);
 
-                if (!id) {
+                const blogId = localStorage.getItem("id");
+                if (!blogId) {
                     setSaveStatus("idle");
                     toast.error("Cannot get blog id");
                     return;
                 }
 
-                const res = await updateBlogById(id, currentString, plainText);
-
+                const res = await updateBlogById(blogId, heading, currentString, plainText);
                 if (res?.success) {
                     lastSavedRef.current = currentString;
                     setSaveStatus("saved");
@@ -219,8 +271,8 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                     setSaveStatus("idle");
                     if (res?.message) toast.error(res.message);
                 }
-            }, 5000),
-        [editor, id]
+            }, 10000),
+        [editor, heading, setBlocks]
     );
 
     useEffect(() => {
@@ -232,21 +284,12 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
 
     async function fetchBlogs() {
         const list = await getBlogsByEmail(userEmail);
-        setblogsList(list);
+        setblogsList(list.blogsList);
     }
 
     useEffect(() => {
         fetchBlogs();
     }, [userEmail]);
-
-    useEffect(() => {
-        if (editor && blocks.length > 0) {
-            editor.replaceBlocks(editor.document, blocks);
-
-            lastSavedRef.current = JSON.stringify(blocks);
-            setSaveStatus("idle");
-        }
-    }, [blocks, editor]);
 
     async function handleGetBlogById(id: string) {
         setIsDrawerOpen(false);
@@ -342,10 +385,17 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                 const currentString = JSON.stringify(currentContent);
                 const plainText = extractPlainTextFromBlocks(currentContent);
 
-                updateBlogById(id, currentString, plainText).then((res) => {
+                updateBlogById(id, computeHeading(plainText), currentString, plainText).then((res) => {
                     if (res?.success) {
+                        const newHeading = computeHeading(plainText);
+                        setHeading(newHeading);
+                        lastHeadingRef.current = newHeading;
+                        fetchBlogs();
+
                         lastSavedRef.current = currentString;
                         setSaveStatus("saved");
+                        localStorage.setItem("pageContent", currentString);
+                        localStorage.setItem("parsedContent", plainText);
                         toast.success("Blog saved");
                     } else {
                         setSaveStatus("idle");
@@ -358,6 +408,19 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [editor, id]);
+
+    useEffect(() => {
+        if (editor && blocks.length > 0) {
+            editor.replaceBlocks(editor.document, blocks);
+            lastSavedRef.current = JSON.stringify(blocks);
+            setSaveStatus("idle");
+        }
+    }, [blocks, editor]);
+
+    useEffect(() => {
+        if (!id) return;
+        debouncedHeadingUpdate(parsedContent, id);
+    }, [parsedContent, id]);
 
     return (
         <div className="max-w-5xl w-full mx-auto">
@@ -419,8 +482,10 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                     <DrawerHeader>
-                        <DrawerTitle>Your Creations, {userName}</DrawerTitle>
-                        <DrawerDescription>This action cannot be undone.</DrawerDescription>
+                        <DrawerTitle className="text-lg font-medium">Your Creations, {userName}</DrawerTitle>
+                        <DrawerDescription className="sr-only">
+                            A list of all the creations of {userName} - {userEmail}
+                        </DrawerDescription>
                         <ScrollArea className="h-[33vh] max-w-md w-full mx-auto rounded-md">
                             <div className="px-4 flex-col">
                                 {
@@ -429,14 +494,16 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                                             <div className="max-w-md w-full flex items-center gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
                                                 <Button
                                                     variant="ghost"
-                                                    className={`flex-1 justify-start font-medium text-sm sm:text-base truncate
+                                                    className={`flex-1 justify-start text-md truncate overflow-hidden text-ellipsis
                                                     ${blog.id === id ? "underline text-accent-foreground underline-offset-2" : ""}`}
                                                     title={blog.heading}
                                                     onClick={() => {
                                                         handleGetBlogById(blog.id);
                                                     }}
                                                 >
-                                                    {blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1)}
+                                                    <span className="w-[300px] text-ellipsis truncate text-start sm:w-[150px] md:w-[300px]">
+                                                        {blog.heading ? blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1, 30) + "..." : "Untitled"}
+                                                    </span>
                                                 </Button>
 
                                                 <AlertDialog>
@@ -453,7 +520,9 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                This action cannot be undone. This will permanently delete the chapter - <span className="underline underline-offset-2">{blog.heading}</span> and remove its data from our servers.
+                                                                This action cannot be undone. This will permanently delete the chapter - <span className="underline underline-offset-2">
+                                                                    {blog.heading ? blog.heading.charAt(0).toUpperCase() + blog.heading.slice(1, 30) + "..." : "Untitled"}
+                                                                </span> and remove its data from our servers.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
@@ -463,15 +532,18 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
                                                                     const res = await deleteBlogById(blog.id);
                                                                     if (res.success) {
                                                                         toast.success("Blog deleted successfully");
-                                                                        fetchBlogs();
+                                                                        await fetchBlogs();
 
                                                                         if (blog.id === id) {
-                                                                            handleCreateNewBlog();
+                                                                            localStorage.removeItem("id");
+                                                                            localStorage.removeItem("pageContent");
+                                                                            localStorage.removeItem("parsedContent");
+                                                                            await handleCreateNewBlog();
                                                                         }
                                                                     } else {
                                                                         toast.error(res.message);
+                                                                        await fetchBlogs();
                                                                     }
-                                                                    fetchBlogs();
                                                                 }}
                                                             >
                                                                 Continue

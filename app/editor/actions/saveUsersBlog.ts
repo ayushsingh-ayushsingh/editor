@@ -3,69 +3,95 @@
 import { db } from "@/db/drizzle";
 import { blog as blogContent, usersBlogs } from "@/db/schema";
 import { v4 as uuidv4 } from "uuid";
-import { desc, eq } from "drizzle-orm";
-import { getInitialContent, extractPlainTextFromBlocks } from "../initialBlock"
-import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
+import { eq } from "drizzle-orm";
+import { getInitialContent, extractPlainTextFromBlocks } from "../initialBlock";
+import { uniqueNamesGenerator, adjectives, colors, animals } from "unique-names-generator";
 
 function randomName() {
     return uniqueNamesGenerator({
         dictionaries: [adjectives, colors, animals],
-        separator: ' ',
-        style: 'lowerCase'
+        separator: " ",
+        style: "lowerCase",
     });
 }
 
 export async function createNewBlog(email: string, author: string) {
+    const newBlogId = uuidv4();
+    const newContentId = uuidv4();
+
+    const content = getInitialContent();
+    const plainText = extractPlainTextFromBlocks(content).replace(/\s+/g, " ").trim();
+
+    // Content heading (first 30 chars of plainText or Untitled)
+    const contentHeading = plainText.length > 0 ? plainText.substring(0, 30) : "Untitled";
+
     try {
-        const newBlogId = uuidv4();
-        const newContentId = uuidv4();
+        await db.transaction(async (tx) => {
+            await tx.insert(usersBlogs).values({
+                id: newBlogId,
+                email,
+                heading: contentHeading,
+            });
 
-        const heading = randomName();
+            await tx.insert(blogContent).values({
+                id: newContentId,
+                userBlogId: newBlogId,
+                author,
+                email,
+                content: JSON.stringify(content),
+                parsed: plainText,
+                heading: contentHeading,
+            });
+        });
 
-        const newUsersBlog: typeof usersBlogs.$inferInsert = {
-            id: newBlogId,
-            email,
-            heading,
+        console.log("New blog created:", contentHeading);
+
+        return {
+            success: true,
+            message: "New Blog Created",
+            newBlogId,
+            newContentId,
+            heading: contentHeading,
         };
-
-        const content = getInitialContent();
-
-        const newBlogContent: typeof blogContent.$inferInsert = {
-            id: newContentId,
-            userBlogId: newBlogId,
-            author,
-            email,
-            heading,
-            content: JSON.stringify(content),
-            parsed: extractPlainTextFromBlocks(content),
-        };
-
-        await db.insert(usersBlogs).values(newUsersBlog);
-        await db.insert(blogContent).values(newBlogContent);
-
-        console.log("New blog created:", heading);
-
-        return { success: true, message: "New Blog Created", newBlogId, newContentId, heading };
     } catch (error) {
         console.error("Failed to create blog:", error);
         return { success: false, message: "Failed to create new blog!" };
     }
 }
 
-export async function updateBlogById(id: string, content: string, parsed: string) {
+export async function updateBlogById(
+    id: string,
+    heading: string,
+    content: string,
+    parsed: string
+) {
     try {
-        await db.update(blogContent).set({
-            content,
-            parsed,
-            updatedAt: new Date()
-        }).where(eq(blogContent.userBlogId, id))
+        await db.transaction(async (tx) => {
+            await tx
+                .update(blogContent)
+                .set({
+                    content,
+                    parsed,
+                    heading: parsed.substring(0, 30) || "Untitled", // safe fallback
+                    updatedAt: new Date(),
+                })
+                .where(eq(blogContent.userBlogId, id));
 
-        console.log("Blog updated");
+            await tx
+                .update(usersBlogs)
+                .set({
+                    heading: heading || "Untitled",
+                    updatedAt: new Date(),
+                })
+                .where(eq(usersBlogs.id, id));
+        });
+
+        console.log("Blog updated:", id);
 
         return {
             success: true,
-            message: "Blog saved"
-        }
+            message: "Blog saved",
+        };
     } catch (error) {
         console.error("Failed to update blog:", error);
         return { success: false, message: "Failed to update blog!" };

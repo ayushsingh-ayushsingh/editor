@@ -13,10 +13,10 @@ export async function getBlogsByEmail(email: string) {
 
         console.log("Blog list served");
 
-        return blogsList;
+        return { success: true, message: "Chapters list received", blogsList };
     } catch (error) {
         console.log("Could not get blogs by email", error);
-        return [];
+        return { success: true, message: "Chapters list received", blogsList: [] };
     }
 }
 

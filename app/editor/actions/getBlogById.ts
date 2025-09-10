@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db/drizzle";
-import { usersBlogs, blog as blogContent } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { blog as blogContent } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 type GetBlogResult = {
     success: boolean;
