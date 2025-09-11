@@ -134,6 +134,34 @@
   background-clip: content-box;
 }
 
+@keyframes move-left-right {
+  from {
+    transform: translateX(-30vw);
+  }
+
+  to {
+    transform: translateX(130vw);
+  }
+}
+
+@keyframes move-right-left {
+  from {
+    transform: translateX(130vw);
+  }
+
+  to {
+    transform: translateX(-30vw);
+  }
+}
+
+.animate-move-left-right {
+  animation-name: move-left-right;
+}
+
+.animate-move-right-left {
+  animation-name: move-right-left;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -186,6 +214,24 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
 @media (max-width: 1120px) {

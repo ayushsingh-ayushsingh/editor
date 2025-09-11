@@ -5,12 +5,9 @@ import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import DogAnimation from "@/components/animations/dog-animation";
 import { codeBlock } from "@blocknote/code-block";
 import { ChevronUp, Trash2, CircleCheck, LoaderCircle } from "lucide-react";
 import { createNewBlog, updateBlogById } from "./actions/saveUsersBlog";
-import { Label } from '@/components/ui/label'
-import { Switch } from "@/components/ui/switch"
 
 import {
     Tooltip,
@@ -116,19 +113,6 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
     // Page content
 
     const locale = en;
-
-    const [showAnimation, setShowAnimation] = useState<boolean>(true);
-
-    useEffect(() => {
-        const storedValue = localStorage.getItem("showAnimation");
-        if (storedValue !== null) {
-            setShowAnimation(storedValue === "true");
-        }
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem("showAnimation", showAnimation.toString());
-    }, [showAnimation]);
 
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
     const [id, setId] = useState<string | null>(null);

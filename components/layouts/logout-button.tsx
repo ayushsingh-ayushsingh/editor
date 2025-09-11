@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { redirect, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';

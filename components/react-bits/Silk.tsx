@@ -1,7 +1,6 @@
 "use client"
 
-/* eslint-disable react/no-unknown-property */
-import React, { forwardRef, useMemo, useRef, useLayoutEffect, useEffect, useState } from "react";
+import React, { forwardRef, useMemo, useRef, useLayoutEffect } from "react";
 import { Canvas, useFrame, useThree, RootState } from "@react-three/fiber";
 import { Color, Mesh, ShaderMaterial } from "three";
 import { IUniform } from "three";
@@ -136,10 +135,11 @@ export interface SilkProps {
 }
 
 const Silk: React.FC<SilkProps> = ({
-  speed = 3,
+  speed = 5,
   scale = 1,
-  color = "#374151",
-  noiseIntensity = 0,
+  // color = "#374151",
+  color = "#777777",
+  noiseIntensity = 1,
   rotation = 0,
 }) => {
   const meshRef = useRef<Mesh>(null);
@@ -157,8 +157,8 @@ const Silk: React.FC<SilkProps> = ({
   );
 
   return (
-    <div className='h-[100vh] fixed w-[100vw] top-0 left-0 -z-10'>
-      <Canvas dpr={[1, 2]} frameloop="always" className="h-full w-full">
+    <div className='h-[100vh] fixed w-[100vw] top-0 left-0 -z-10 bg-accent brightness-75'>
+      <Canvas dpr={[1, 2]} frameloop="always" className="h-full w-full opacity-75">
         <SilkPlane ref={meshRef} uniforms={uniforms} />
       </Canvas>
     </div>

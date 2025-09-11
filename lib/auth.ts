@@ -27,12 +27,13 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
-        sendResetPassword: async ({ user, url }: any) => {
+        sendResetPassword: async ({ user, url }: { user: { id: string; createdAt: Date; updatedAt: Date; email: string; emailVerified: boolean; name: string; image?: string | null | undefined; }, url: string }) => {
+            const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${url}`;
             resend.emails.send({
                 from: `Ayush Singh <onboarding@resend.dev>`,
                 to: user.email,
                 subject: "Reset your password",
-                react: ForgotPasswordEmail({ username: user.name, resetUrl: url, userEmail: user.email }),
+                react: ForgotPasswordEmail({ username: user.name, resetUrl: fullUrl, userEmail: user.email }),
             });
         },
         requireEmailVerification: true,
