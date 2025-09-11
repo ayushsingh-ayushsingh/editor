@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 
+import {
+    getInitialContent,
+    extractPlainTextFromBlocks
+} from "../initialBlock"
+
 const Editor = dynamic(() => import("./editor"), { ssr: false })
 
 import { Button } from "@/components/ui/button"
@@ -22,9 +27,10 @@ import { ArrowUpRight } from "lucide-react"
 interface DialogProps {
     userName: string
     userEmail: string
+    id: string
 }
 
-export default function ApiDialogTextEditor({ userName, userEmail }: DialogProps) {
+export default function ApiDialogTextEditor({ userName, userEmail, id }: DialogProps) {
     const [googleApiKey, setGoogleApiKey] = useState<string>("")
     const [open, setOpen] = useState<boolean>(false)
 
@@ -40,7 +46,6 @@ export default function ApiDialogTextEditor({ userName, userEmail }: DialogProps
     }, [])
 
     const handleSubmit = (e: React.FormEvent) => {
-        console.log("afdkllkj")
         e.preventDefault()
         const trimmedKey = googleApiKey.trim()
         if (trimmedKey) {
@@ -53,6 +58,9 @@ export default function ApiDialogTextEditor({ userName, userEmail }: DialogProps
             setOpen(false)
         }
     }
+
+    const content = getInitialContent();
+    const parsedContent = extractPlainTextFromBlocks(content);
 
     return (
         <div>
@@ -110,8 +118,10 @@ export default function ApiDialogTextEditor({ userName, userEmail }: DialogProps
                 userName={userName}
                 userEmail={userEmail}
                 googleApiKey={googleApiKey}
+                blogId={id}
+                initialContent={content}
+                initialParsedContent={parsedContent}
             />
-
         </div>
     )
 }

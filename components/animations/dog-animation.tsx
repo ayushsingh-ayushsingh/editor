@@ -11,7 +11,7 @@ import { Marquee } from "@/components/magicui/marquee";
 export default function MarqueeDemo() {
     return (
         <div className="flex w-full flex-col items-center justify-center overflow-hidden fixed bottom-14 right-0 left-0 -z-50 dark:opacity-70">
-            <Marquee className="[--duration:120s] fixed pointer-events-none">
+            <Marquee className="[--duration:180s] fixed pointer-events-none">
                 <div className="pl-[5000px]">
                     <div className="w-48 h-48 transform -scale-x-100 p-7 pt-10">
                         <Lottie animationData={brownDog} loop autoplay />
@@ -29,7 +29,7 @@ export default function MarqueeDemo() {
                 </div>
                 <div className="w-[100vw]"></div>
             </Marquee>
-            <Marquee reverse className="[--duration:120s] fixed pointer-events-none">
+            <Marquee reverse className="[--duration:180s] fixed pointer-events-none">
                 <div className="w-[100vw]"></div>
                 <div className="pr-[5000px]">
                     <div className="w-48 h-48 pt-2">

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
 import { ChevronUp, Trash2, CircleCheck, LoaderCircle } from "lucide-react";
-import { createNewBlog, updateBlogById } from "./actions/saveUsersBlog";
+import { createNewBlog, updateBlogById } from "../actions/saveUsersBlog";
 
 import {
     Tooltip,
@@ -33,8 +33,8 @@ import debounce from 'lodash.debounce';
 import { BlockNoteEditor, filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from "@blocknote/mantine";
 import '@blocknote/mantine/style.css';
-import "./css/styles.css";
-import "./css/codeStyles.css"
+import "../css/styles.css";
+import "../css/codeStyles.css"
 import {
     FormattingToolbar,
     FormattingToolbarController,
@@ -68,13 +68,16 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer"
-import { getBlogsByEmail, deleteBlogById } from "./actions/getUsersBlogs";
-import { getBlogById } from "./actions/getBlogById";
+import { getBlogsByEmail, deleteBlogById } from "../actions/getUsersBlogs";
+import { getBlogById } from "../actions/getBlogById";
 
 interface EditorProps {
     userName: string;
     userEmail: string;
     googleApiKey: string;
+    blogId: string;
+    initialContent: Block[];
+    initialParsedContent: string;
 }
 
 function FormattingToolbarWithAI() {
@@ -109,20 +112,15 @@ function SuggestionMenuWithAI(props: {
     );
 }
 
-export default function Editor({ userName, userEmail, googleApiKey }: EditorProps) {
+export default function Editor({ userName, userEmail, googleApiKey, blogId, initialContent, initialParsedContent }: EditorProps) {
     // Page content
 
     const locale = en;
 
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-    const [id, setId] = useState<string | null>(null);
+    const [id, setId] = useState<string | null>(blogId);
 
     const lastSavedRef = React.useRef<string>("");
-
-    useEffect(() => {
-        const initialId = typeof window !== "undefined" ? localStorage.getItem("id") : null;
-        setId(initialId);
-    }, []);
 
     useEffect(() => {
         if (saveStatus === "saved") {
@@ -131,24 +129,7 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         }
     }, [saveStatus]);
 
-    const [blocks, setBlocks] = useState<Block[]>(() => {
-        try {
-            if (typeof window !== "undefined") {
-                const stored = localStorage.getItem("pageContent");
-                let parsed: Block[] | null = null;
-                try {
-                    parsed = stored ? JSON.parse(stored) : null;
-                } catch (e) {
-                    console.error("Invalid JSON in blog content", stored);
-                    parsed = getInitialContent();
-                }
-                return Array.isArray(parsed) ? parsed : getInitialContent();
-            }
-        } catch {
-            return getInitialContent();
-        }
-        return getInitialContent();
-    });
+    const [blocks, setBlocks] = useState<Block[]>(initialContent);
 
     useEffect(() => {
         if (blocks.length > 0) {
@@ -174,7 +155,6 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
         extensions: [
             createAIExtension({
                 model: createGoogleGenerativeAI({
-                    // apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
                     apiKey: googleApiKey || "",
                 })("gemini-2.5-flash"),
             }),
@@ -183,12 +163,7 @@ export default function Editor({ userName, userEmail, googleApiKey }: EditorProp
 
     // Parsed Content
 
-    const [parsedContent, setParsedContent] = useState(() => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("parsedContent") || "";
-        }
-        return "";
-    });
+    const [parsedContent, setParsedContent] = useState(initialParsedContent);
 
     const [heading, setHeading] = useState(() => {
         return parsedContent && parsedContent.trim().length > 0

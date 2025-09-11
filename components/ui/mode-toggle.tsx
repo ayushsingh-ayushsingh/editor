@@ -18,32 +18,45 @@ import {
 
 export function ModeToggle() {
     const { theme, setTheme } = useTheme()
+    const [mounted, setMounted] = useState(false)
+    const [showAnimation, setShowAnimation] = useState<boolean>(true)
+
+    useEffect(() => {
+        setMounted(true)
+        const storedValue = localStorage.getItem("showAnimation")
+        if (storedValue !== null) {
+            setShowAnimation(storedValue === "true")
+        }
+    }, [])
+
+    useEffect(() => {
+        if (mounted) {
+            localStorage.setItem("showAnimation", showAnimation.toString())
+        }
+    }, [showAnimation, mounted])
 
     const toggleTheme = () => {
         setTheme(theme === "dark" ? "light" : "dark")
     }
 
-    const [showAnimation, setShowAnimation] = useState<boolean>(() => {
-        if (typeof window === "undefined") {
-            return true;
-        }
-
-        const storedValue = localStorage.getItem("showAnimation");
-        if (storedValue !== null) {
-            return storedValue === "true";
-        }
-        return true;
-    });
-
-    useEffect(() => {
-        localStorage.setItem("showAnimation", showAnimation.toString());
-    }, [showAnimation]);
+    if (!mounted) {
+        return (
+            <div className="fixed bottom-4 right-4 z-50 flex items-center">
+                <div className='flex flex-col gap-3 fixed right-16'>
+                    <div className='flex items-center space-x-2 bg-background'>
+                        <Switch checked={true} aria-label="Loading animation toggle" />
+                    </div>
+                </div>
+                <Button variant="secondary" size="sm" aria-label="Loading theme toggle">
+                    <Sun className="h-[1.2rem] w-[1.2rem]" />
+                </Button>
+            </div>
+        )
+    }
 
     return (
         <div className="fixed bottom-4 right-4 z-50 flex items-center">
-            {
-                showAnimation && <DogAnimation />
-            }
+            {showAnimation && <DogAnimation />}
             <div className='flex flex-col gap-3 fixed right-16'>
                 <Tooltip>
                     <TooltipTrigger asChild>
