@@ -47,7 +47,7 @@ export function ModeToggle() {
                         <Switch checked={true} aria-label="Loading animation toggle" />
                     </div>
                 </div>
-                <Button variant="secondary" size="sm" aria-label="Loading theme toggle">
+                <Button variant="secondary" size="icon" aria-label="Loading theme toggle">
                     <Sun className="h-[1.2rem] w-[1.2rem]" />
                 </Button>
             </div>
@@ -60,7 +60,7 @@ export function ModeToggle() {
             <div className='flex flex-col gap-3 fixed right-16'>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <div className='flex items-center space-x-2 bg-background'>
+                        <div className='flex items-center space-x-2 bg-background rounded-full'>
                             <Label htmlFor='toggle-dog-animation' className="sr-only">
                                 Toggle Dog Animation
                             </Label>

@@ -133,7 +133,7 @@
   background: hsl(var(--foreground) / 0.2);
   background-clip: content-box;
 }
-
+/* 
 @keyframes move-left-right {
   from {
     transform: translateX(-30vw);
@@ -160,7 +160,7 @@
 
 .animate-move-right-left {
   animation-name: move-right-left;
-}
+} */
 
 @theme inline {
   --color-background: var(--background);

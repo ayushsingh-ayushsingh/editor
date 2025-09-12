@@ -4,7 +4,7 @@ import { db } from "@/db/drizzle";
 import { blog as blogContent, usersBlogs } from "@/db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
-import { getInitialContent, extractPlainTextFromBlocks } from "../initialBlock";
+import { getInitialContent, extractPlainTextFromBlocks } from "@/app/editor/[id]/initialBlock";
 
 export async function createNewBlog(email: string, author: string) {
     const newBlogId = uuidv4();
@@ -13,8 +13,7 @@ export async function createNewBlog(email: string, author: string) {
     const content = getInitialContent();
     const plainText = extractPlainTextFromBlocks(content).replace(/\s+/g, " ").trim();
 
-    // Content heading (first 30 chars of plainText or Untitled)
-    const contentHeading = plainText.length > 0 ? plainText.substring(0, 30) : "Untitled";
+    const contentHeading = plainText.length > 0 ? plainText.substring(0, 30) + "..." : "Untitled";
 
     try {
         await db.transaction(async (tx) => {
@@ -63,7 +62,7 @@ export async function updateBlogById(
                 .set({
                     content,
                     parsed,
-                    heading: parsed.substring(0, 30) || "Untitled", // safe fallback
+                    heading: parsed.substring(0, 30) || "Untitled",
                     updatedAt: new Date(),
                 })
                 .where(eq(blogContent.userBlogId, id));

@@ -1,7 +1,7 @@
-import ApiDialogTextEditor from "./apiDialog";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createNewBlog } from "./actions/saveUsersBlog";
 
 export default async function Page() {
     const session = await auth.api.getSession({
@@ -12,9 +12,12 @@ export default async function Page() {
         redirect("/login");
     }
 
-    return (
-        <div className="my-6">
-            <ApiDialogTextEditor userEmail={session.user.email} userName={session.user.name} />
-        </div>
-    )
+    const res = await createNewBlog(session.user.email, session.user.name);
+
+    if (!res?.success || !res?.newBlogId) {
+        redirect("/editor");
+    }
+
+    const newId = res.newBlogId;
+    redirect(`/editor/${newId}`);
 }

@@ -1,0 +1,524 @@
+"use client";
+
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { Block } from "@blocknote/core";
+import { en } from "@blocknote/core/locales";
+import uploadFile from "./uploadFile";
+import { toast } from "sonner";
+import { codeBlock } from "@blocknote/code-block";
+import { ChevronUp, Trash2, CircleCheck, LoaderCircle } from "lucide-react";
+import { createNewBlog, updateBlogById } from "../actions/saveUsersBlog";
+
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+import debounce from "lodash.debounce";
+
+import { BlockNoteEditor, filterSuggestionItems } from "@blocknote/core";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/mantine/style.css";
+import "../css/styles.css";
+import "../css/codeStyles.css";
+import {
+    FormattingToolbar,
+    FormattingToolbarController,
+    SuggestionMenuController,
+    getDefaultReactSlashMenuItems,
+    getFormattingToolbarItems,
+    useCreateBlockNote,
+} from "@blocknote/react";
+import {
+    AIMenuController,
+    AIToolbarButton,
+    createAIExtension,
+    getAISlashMenuItems,
+} from "@blocknote/xl-ai";
+import "@blocknote/xl-ai/style.css";
+import { en as aiEn } from "@blocknote/xl-ai/locales";
+
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { extractPlainTextFromBlocks } from "./initialBlock";
+import { getInitialContent } from "./initialBlock";
+
+import { Button } from "@/components/ui/button";
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "@/components/ui/drawer";
+import { getBlogsByEmail, deleteBlogById } from "../actions/getUsersBlogs";
+import { getBlogById } from "../actions/getBlogById";
+
+import { useRouter } from "next/navigation"; // <-- added router import
+
+interface EditorProps {
+    userName: string;
+    userEmail: string;
+    googleApiKey: string;
+    blogId: string;
+    initialContent: Block[];
+    initialParsedContent: string;
+}
+
+function FormattingToolbarWithAI() {
+    return (
+        <FormattingToolbarController
+            formattingToolbar={() => (
+                <FormattingToolbar>
+                    {...getFormattingToolbarItems()}
+                    <AIToolbarButton />
+                </FormattingToolbar>
+            )}
+        />
+    );
+}
+
+function SuggestionMenuWithAI(props: { editor: BlockNoteEditor<any, any, any> }) {
+    return (
+        <SuggestionMenuController
+            triggerCharacter="/"
+            getItems={async (query) =>
+                filterSuggestionItems(
+                    [...getDefaultReactSlashMenuItems(props.editor), ...getAISlashMenuItems(props.editor)],
+                    query
+                )
+            }
+        />
+    );
+}
+
+export default function Editor({
+    userName,
+    userEmail,
+    googleApiKey,
+    blogId,
+    initialContent,
+    initialParsedContent,
+}: EditorProps) {
+    const router = useRouter(); // <-- router instance to navigate to /editor/:id
+
+    const locale = en;
+
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [id, setId] = useState<string | null>(blogId ?? null);
+    const lastSavedRef = useRef<string>("");
+
+    // Editor content state
+    const [blocks, setBlocks] = useState<Block[]>(initialContent?.length ? initialContent : getInitialContent());
+    const [parsedContent, setParsedContent] = useState(initialParsedContent ?? "");
+
+    // Heading fallback now "..." per your request
+    function computeHeading(text: string) {
+        return text && text.trim().length > 0 ? text.replace(/\s+/g, " ").trim().substring(0, 50) : "...";
+    }
+
+    const [heading, setHeading] = useState(() => computeHeading(initialParsedContent ?? ""));
+    const lastHeadingRef = useRef(heading);
+
+    const [blogsList, setBlogsList] = useState<any[]>([]);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // create editor once with stable initial content
+    const editor = useCreateBlockNote({
+        codeBlock,
+        // set the editor's initial content from props (server) or fallback
+        initialContent: initialContent?.length ? initialContent : getInitialContent(),
+        dictionary: {
+            ...locale,
+            placeholders: {
+                ...locale.placeholders,
+                emptyDocument: "Render your thoughts here...",
+                default: "...",
+                heading: "...",
+            },
+            ai: aiEn,
+        },
+        uploadFile,
+        extensions: [
+            createAIExtension({
+                model: createGoogleGenerativeAI({
+                    apiKey: googleApiKey || "",
+                })("gemini-2.5-flash"),
+            }),
+        ],
+    });
+
+    // fetchBlogs wrapped in useCallback so we can await it from other functions safely
+    const fetchBlogs = useCallback(async () => {
+        try {
+            const list = await getBlogsByEmail(userEmail);
+            setBlogsList(list?.blogsList ?? []);
+        } catch (err) {
+            console.error("fetchBlogs error", err);
+            setBlogsList([]);
+        }
+    }, [userEmail]);
+
+    useEffect(() => {
+        void fetchBlogs();
+    }, [fetchBlogs]);
+
+    // load a blog into editor (explicit) and navigate to its URL
+    async function handleGetBlogById(newId: string) {
+        setIsDrawerOpen(false);
+        try {
+            const res = await getBlogById(newId);
+            if (!res?.success || !res?.blog) {
+                toast.error(res?.message || "Failed to load blog");
+                return;
+            }
+
+            const stored = res.blog.content || "";
+            const parsed = stored ? JSON.parse(stored) : null;
+            const currentContent = Array.isArray(parsed) ? parsed : getInitialContent();
+            const plainText = extractPlainTextFromBlocks(currentContent);
+
+            // update editor content immediately for snappy UX
+            try {
+                editor.replaceBlocks(editor.document, currentContent);
+            } catch (err) {
+                console.warn("replaceBlocks failed", err);
+            }
+
+            setBlocks(currentContent);
+            setParsedContent(plainText);
+
+            setId(newId);
+            lastSavedRef.current = JSON.stringify(currentContent);
+            setSaveStatus("idle");
+
+            const h = computeHeading(plainText);
+            setHeading(h);
+            lastHeadingRef.current = h;
+
+            // update URL so refresh/bookmark preserves the blog id
+            try {
+                // use replace to avoid extra history entries
+                void router.replace(`/editor/${newId}`);
+            } catch (err) {
+                console.warn("router.replace failed", err);
+            }
+
+            toast.success(res.message || "Blog loaded");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to load blog");
+        }
+    }
+
+    // create a new blog, load initial content, and navigate to its page
+    async function handleCreateNewBlog() {
+        setIsDrawerOpen(false);
+        try {
+            const newBlogRes = await createNewBlog(userEmail, userName);
+            if (!newBlogRes?.success || !newBlogRes?.newBlogId) {
+                toast.error(newBlogRes?.message || "Failed to create new blog");
+                return;
+            }
+            const newBlogId = newBlogRes.newBlogId;
+            setId(newBlogId);
+
+            // prepare initial content and put into editor
+            const initial = getInitialContent();
+            try {
+                editor.replaceBlocks(editor.document, initial);
+            } catch (err) {
+                console.warn("replaceBlocks failed", err);
+            }
+
+            setBlocks(initial);
+            setParsedContent("");
+            lastSavedRef.current = JSON.stringify(initial);
+            setHeading("...");
+            lastHeadingRef.current = "...";
+
+            // refresh list
+            await fetchBlogs();
+
+            // navigate to the blog's URL so refresh/bookmark keeps it
+            try {
+                void router.replace(`/editor/${newBlogId}`);
+            } catch (err) {
+                console.warn("router.replace failed", err);
+            }
+
+            toast.success("New blog created!");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to create new blog");
+        }
+    }
+
+    const saveBlog = useCallback(
+        async (force = false) => {
+            if (!id) {
+                if (force) toast.error("No blog selected to save");
+                return;
+            }
+
+            try {
+                const currentContent = editor.document;
+                const currentString = JSON.stringify(currentContent);
+                const plainText = extractPlainTextFromBlocks(currentContent);
+
+                if (!force && currentString === lastSavedRef.current) {
+                    setSaveStatus("idle");
+                    return;
+                }
+
+                setSaveStatus("saving");
+                const res = await updateBlogById(id, computeHeading(plainText), currentString, plainText);
+
+                if (res?.success) {
+                    const newHeading = computeHeading(plainText);
+                    setHeading(newHeading);
+                    lastHeadingRef.current = newHeading;
+                    lastSavedRef.current = currentString;
+                    if (force) await fetchBlogs();
+                    setSaveStatus("saved");
+                    if (force) toast.success("Blog saved");
+                } else {
+                    setSaveStatus("idle");
+                    if (force) toast.error(res?.message || "Failed to save blog");
+                }
+            } catch (err) {
+                console.error("saveBlog error", err);
+                setSaveStatus("idle");
+                if (force) toast.error("Failed to save blog");
+            }
+        },
+        [id, editor, fetchBlogs]
+    );
+
+    // debounce auto-save calls
+    const debouncedHandleChange = useMemo(() => debounce(() => void saveBlog(false), 5000), [saveBlog]);
+
+    useEffect(() => {
+        return () => {
+            debouncedHandleChange.cancel();
+        };
+    }, [debouncedHandleChange]);
+
+    // ctrl/cmd + S handler
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+                void saveBlog(true);
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [saveBlog]);
+
+    // sync heading whenever parsed content changes
+    useEffect(() => {
+        const newHeading = computeHeading(parsedContent);
+        if (newHeading !== heading) {
+            setHeading(newHeading);
+            lastHeadingRef.current = newHeading;
+        }
+    }, [parsedContent, heading]);
+
+    // editor onChange handler (keeps local states and triggers debounced save)
+    function handleEditorChange() {
+        try {
+            const content = editor.document;
+            const currentString = JSON.stringify(content);
+            const plainText = extractPlainTextFromBlocks(content);
+
+            setBlocks(content);
+            setParsedContent(plainText);
+
+            if (currentString !== lastSavedRef.current) {
+                if (saveStatus !== "saving") setSaveStatus("saving");
+                debouncedHandleChange();
+            }
+        } catch (err) {
+            console.error("handleEditorChange", err);
+        }
+    }
+
+    // apply blocks into editor when editor instance appears
+    useEffect(() => {
+        if (editor && blocks.length > 0) {
+            try {
+                editor.replaceBlocks(editor.document, blocks);
+                lastSavedRef.current = JSON.stringify(blocks);
+                setSaveStatus("idle");
+            } catch (err) {
+                console.warn("initial replaceBlocks failed", err);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editor]);
+
+    async function handleDeleteBlog(blogIdToDelete: string) {
+        try {
+            const res = await deleteBlogById(blogIdToDelete);
+            if (res.success) {
+                toast.success("Blog deleted successfully");
+                await fetchBlogs();
+                if (blogIdToDelete === id) {
+                    // create a new blog and navigate to it (function already navigates)
+                    await handleCreateNewBlog();
+                }
+            } else {
+                toast.error(res.message || "Failed to delete blog");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete blog");
+        }
+    }
+
+    function renderTitle(blog: any) {
+        if (!blog?.heading) return "Untitled";
+        const h: string = blog.heading.trim();
+        const slice = h.length > 30 ? h.slice(0, 30).trim() + "..." : h;
+        if (slice === "...") return "Untitled";
+        return slice.charAt(0).toUpperCase() + slice.slice(1);
+    }
+
+    return (
+        <div className="max-w-5xl w-full mx-auto">
+            <div className="min-h-[80vh] mb-8">
+                <div className="max-w-5xl mx-auto pb-[33vh]">
+                    <div className="overflow-x-hidden">
+                        <BlockNoteView
+                            className="pl-0 py-4 -mx-10"
+                            spellCheck="false"
+                            theme="light"
+                            editor={editor}
+                            onChange={handleEditorChange}
+                            data-theming-css-variables
+                            data-changing-font
+                            formattingToolbar={false}
+                            slashMenu={false}
+                        >
+                            <span className="fixed top-2 right-2 text-xs">
+                                <span className="fixed top-4 right-4 text-xs flex items-center gap-2">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant={"secondary"} onClick={() => void saveBlog(true)}>
+                                                <span>Save</span>
+                                                {saveStatus === "saving" && <LoaderCircle className="animate-spin" size={16} />}
+                                                {saveStatus === "saved" && <CircleCheck className="text-primary" size={16} />}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Save Chapter</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </span>
+                            </span>
+
+                            <AIMenuController />
+                            <FormattingToolbarWithAI />
+                            <SuggestionMenuWithAI editor={editor} />
+                        </BlockNoteView>
+                    </div>
+                </div>
+            </div>
+
+            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                <DrawerTrigger asChild>
+                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent">
+                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" />
+                    </span>
+                </DrawerTrigger>
+
+                <DrawerContent className="focus-visible:outline-none focus-visible:ring-0 focus:outline-none focus:ring-0">
+                    <DrawerHeader>
+                        <DrawerTitle className="text-lg font-medium">Your Creations, {userName}</DrawerTitle>
+                        <DrawerDescription className="sr-only">
+                            A list of all the creations of {userName} - {userEmail}
+                        </DrawerDescription>
+
+                        <ScrollArea className="h-[33vh] max-w-md w-full mx-auto rounded-md">
+                            <div className="px-4 flex-col">
+                                {blogsList.map((blog) => (
+                                    <div key={blog.id} className="-ml-2">
+                                        <div className="max-w-md w-full flex items-center justify-between gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
+                                            <Button
+                                                variant="ghost"
+                                                className={`flex-1 min-w-0 justify-start text-md truncate ${blog.id === id ? "underline text-accent-foreground underline-offset-2" : ""
+                                                    }`}
+                                                title={blog.heading}
+                                                onClick={() => void handleGetBlogById(blog.id)}
+                                            >
+                                                <span className="block truncate text-start">{renderTitle(blog)}</span>
+                                            </Button>
+
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="shrink-0 dark:hover:bg-card/80 hover:bg-card/80">
+                                                        <Trash2 className="text-destructive w-5 h-5" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete the chapter -{" "}
+                                                            <span className="underline underline-offset-2">{renderTitle(blog)}</span> and remove its data from our servers.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={async () => {
+                                                                await handleDeleteBlog(blog.id);
+                                                            }}
+                                                        >
+                                                            Continue
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <div className="h-[20vh] flex justify-center items-end text-muted-foreground">
+                                    {blogsList.length === 0 ? "You have not created any chapter...!" : blogsList.length === 1 ? `You have created a single chapter.` : `You have ${blogsList.length} creations`}
+                                </div>
+                            </div>
+                        </ScrollArea>
+                    </DrawerHeader>
+
+                    <DrawerFooter>
+                        <div className="max-w-md w-full mx-auto space-y-2">
+                            <Button className="max-w-md w-full p-5" onClick={() => void handleCreateNewBlog()}>
+                                Craft New Chapter
+                            </Button>
+                            <Button variant="outline" className="max-w-md w-full p-5" onClick={() => setIsDrawerOpen(false)}>
+                                Close Drawer
+                            </Button>
+                        </div>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
+        </div>
+    );
+}

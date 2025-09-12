@@ -1,5 +1,6 @@
 /* Minimal BlockNote shadcn/ui Theme Configuration */
 .bn-container[data-theming-css-variables][data-color-scheme] {
+  z-index: 1;
   /* Core Editor Colors */
   --bn-colors-editor-text: var(--foreground);
   --bn-colors-editor-background: var(--background);
@@ -47,4 +48,21 @@
 
 .bn-container[data-theming-css-variables] input[type="checkbox"] {
   accent-color: var(--color-primary) !important;
+}
+
+.bn-container[data-theming-css-variables] a {
+  color: var(--primary) !important;
+  text-decoration: underline !important;
+}
+
+/* Force Image/File Upload Placeholder to respect theme */
+.bn-container[data-theming-css-variables] .bn-add-file-button {
+  background-color: var(--primary) !important;
+  border: 1px var(--foreground) !important;
+  color: var(--background) !important;
+}
+
+/* Hover state file/img upload */
+.bn-container[data-theming-css-variables] .bn-add-file-button:hover {
+  opacity: 0.8 !important;
 }

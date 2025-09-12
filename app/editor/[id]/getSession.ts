@@ -1,9 +1,10 @@
-import ApiDialogTextEditor from "./apiDialog";
+"use server"
+
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default async function Page() {
+export default async function getSession() {
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -12,9 +13,5 @@ export default async function Page() {
         redirect("/login");
     }
 
-    return (
-        <div className="my-6">
-            <ApiDialogTextEditor userEmail={session.user.email} userName={session.user.name} />
-        </div>
-    )
+    return session;
 }
