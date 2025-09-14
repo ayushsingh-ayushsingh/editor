@@ -4,10 +4,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 interface PageProps {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }
 
 export default async function Page({ params }: PageProps) {
+    const { id } = await params;
+
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -16,14 +18,17 @@ export default async function Page({ params }: PageProps) {
         redirect("/login");
     }
 
-    const id = params?.id;
     if (!id) {
         redirect("/editor");
     }
 
     return (
         <div className="my-6">
-            <ApiDialogTextEditor userEmail={session.user.email} userName={session.user.name} id={id} />
+            <ApiDialogTextEditor
+                userEmail={session.user.email}
+                userName={session.user.name}
+                id={id}
+            />
         </div>
     );
 }

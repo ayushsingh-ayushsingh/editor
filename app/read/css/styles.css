@@ -1,10 +1,5 @@
 /* Minimal BlockNote shadcn/ui Theme Configuration */
 .bn-container[data-theming-css-variables][data-color-scheme] {
-  /* z index specification */
-  z-index: 1;
-
-  margin: 12px;
-
   /* Core Editor Colors */
   --bn-colors-editor-text: var(--foreground);
   --bn-colors-editor-background: var(--background);
@@ -59,18 +54,21 @@
   text-decoration: underline !important;
 }
 
+.bn-container[data-theming-css-variables] u {
+  background: var(--color-card) !important;
+  padding: var(--radius-md) !important;
+  border-radius: var(--radius-md) !important;
+  text-decoration: underline !important;
+}
+
 /* Force Image/File Upload Placeholder to respect theme */
 .bn-container[data-theming-css-variables] .bn-add-file-button {
-  background-color: var(--color-secondary) !important;
-  color: var(--foreground) !important;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  display: none;
 }
 
 /* Hover state file/img upload */
 .bn-container[data-theming-css-variables] .bn-add-file-button:hover {
-  opacity: 0.8 !important;
+  display: none;
 }
 
 .bn-container[data-theming-css-variables] .bn-visual-media,
@@ -83,11 +81,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 10px;
+  margin-right: 2px;
   background: var(--color-secondary);
-}
-
-.bn-container[data-theming-css-variables] .bn-file-name-with-icon:hover {
-  opacity: 0.8 !important;
 }
 
 .alert {

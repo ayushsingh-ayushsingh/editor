@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Block } from "@blocknote/core";
 
 import { getBlogById } from "../actions/getBlogById";
-import { getInitialContent } from "./initialBlock";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowUpRight, LoaderCircle } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
-const Editor = dynamic(() => import("./editor"), { ssr: false });
+const Viewer = dynamic(() => import("./viewer"), { ssr: false });
 
 interface DialogProps {
     userName: string;
@@ -62,7 +61,7 @@ export default function ApiDialogTextEditor({ userName, userEmail, id }: DialogP
     };
 
     // Blog content state
-    const [content, setContent] = useState<Block[]>(getInitialContent());
+    const [content, setContent] = useState<Block[]>();
     const [parsedContent, setParsedContent] = useState("");
     const [loading, setLoading] = useState(true);
 
@@ -91,11 +90,10 @@ export default function ApiDialogTextEditor({ userName, userEmail, id }: DialogP
 
                 if (!mounted) return;
 
-                setContent(blogContent ? JSON.parse(blogContent) : getInitialContent());
+                setContent(JSON.parse(blogContent));
                 setParsedContent(blogParsedContent || "");
             } catch (err) {
                 console.error("Failed to fetch blog", err);
-                // any fetch error -> show 404 as fallback
                 void router.replace("/404");
             } finally {
                 if (mounted) setLoading(false);
@@ -110,10 +108,7 @@ export default function ApiDialogTextEditor({ userName, userEmail, id }: DialogP
     }, [id, userEmail, router]);
 
     if (loading) {
-        return <div className="p-4 text-muted-foreground h-[90vh] w-full flex items-center justify-center">
-            <Label className="sr-only">Loading editor...</Label>
-            <LoaderCircle className="animate-spin scale-200 text-primary" />
-        </div>;
+        return <div className="p-4 text-muted-foreground">Loading editor...</div>;
     }
 
     return (
@@ -160,15 +155,7 @@ export default function ApiDialogTextEditor({ userName, userEmail, id }: DialogP
                     </DialogContent>
                 </form>
             </Dialog>
-
-            <Editor
-                userName={userName}
-                userEmail={userEmail}
-                googleApiKey={googleApiKey}
-                blogId={id}
-                initialContent={content}
-                initialParsedContent={parsedContent}
-            />
+            {/* <Viewer initialContent={content} /> */}
         </div>
     );
 }

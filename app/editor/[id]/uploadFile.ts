@@ -1,16 +1,29 @@
-async function uploadFile(file: File) {
+const MAX_BYTES = 30 * 1024 * 1024;
+
+export default async function uploadFile(file: File): Promise<string> {
+    if (file.size > MAX_BYTES) {
+        throw new Error("File too large. Maximum allowed size is 30 MB.");
+    }
+
     const body = new FormData();
     body.append("file", file);
 
-    const ret = await fetch("https://tmpfiles.org/api/v1/upload", {
+    const res = await fetch("/api/upload", {
         method: "POST",
-        body: body,
+        body,
     });
 
-    return (await ret.json()).data.url.replace(
-        "tmpfiles.org/",
-        "tmpfiles.org/dl/",
-    );
-}
+    if (!res.ok) {
+        let errText = "";
+        try {
+            const j = await res.json();
+            errText = j?.error ?? JSON.stringify(j);
+        } catch {
+            errText = await res.text();
+        }
+        throw new Error("Upload failed: " + errText);
+    }
 
-export default uploadFile;
+    const json = await res.json();
+    return `/api/files/${json.id}`;
+}

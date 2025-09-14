@@ -6,8 +6,13 @@ import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
-import { ChevronUp, Trash2, CircleCheck, LoaderCircle } from "lucide-react";
+import { ChevronUp, Trash2, CircleCheck, LoaderCircle, ArrowLeft, Copy, Download, Send } from "lucide-react";
 import { createNewBlog, updateBlogById } from "../actions/saveUsersBlog";
+import { links } from "./links";
+
+import Link from "next/link";
+
+import Publish from "./publish";
 
 import {
     Tooltip,
@@ -57,6 +62,7 @@ import { extractPlainTextFromBlocks } from "./initialBlock";
 import { getInitialContent } from "./initialBlock";
 
 import { Button } from "@/components/ui/button";
+
 import {
     Drawer,
     DrawerContent,
@@ -69,7 +75,8 @@ import {
 import { getBlogsByEmail, deleteBlogById } from "../actions/getUsersBlogs";
 import { getBlogById } from "../actions/getBlogById";
 
-import { useRouter } from "next/navigation"; // <-- added router import
+import { useRouter } from "next/navigation";
+import GooeyMenu from "@/components/ui/gooey-menu";
 
 interface EditorProps {
     userName: string;
@@ -79,6 +86,18 @@ interface EditorProps {
     initialContent: Block[];
     initialParsedContent: string;
 }
+
+/**
+     * Selector used to find code block or file block containers inside BlockNote.
+     */
+const TARGET_SELECTOR = `
+    .bn-block-content[data-content-type="codeBlock"],
+    .bn-block-content[data-content-type="codeBlock-inline"],
+    .bn-block-content[class*="language-"],
+    .bn-block-content.language-javascript,
+    .bn-block-content.language-typescript,
+    .bn-block-content[data-content-type="file"]
+`;
 
 function FormattingToolbarWithAI() {
     return (
@@ -116,6 +135,7 @@ export default function Editor({
     initialParsedContent,
 }: EditorProps) {
     const router = useRouter(); // <-- router instance to navigate to /editor/:id
+    const rootRef = useRef<HTMLDivElement | null>(null);
 
     const locale = en;
 
@@ -141,6 +161,12 @@ export default function Editor({
     // create editor once with stable initial content
     const editor = useCreateBlockNote({
         codeBlock,
+        tables: {
+            splitCells: true,
+            cellBackgroundColor: true,
+            cellTextColor: true,
+            headers: true,
+        },
         // set the editor's initial content from props (server) or fallback
         initialContent: initialContent?.length ? initialContent : getInitialContent(),
         dictionary: {
@@ -400,11 +426,223 @@ export default function Editor({
         return slice.charAt(0).toUpperCase() + slice.slice(1);
     }
 
+    const [visible, setVisible] = useState(false);
+    const [pos, setPos] = useState<{ top: number; right: number }>({
+        top: 0,
+        right: 16,
+    });
+
+    const targetRef = useRef<Element | null>(null);
+    const buttonRef = useRef<HTMLDivElement | null>(null);
+
+    const hideTimerRef = useRef<number | null>(null);
+    const actionTimerRef = useRef<number | null>(null);
+
+    const [status, setStatus] = useState<"idle" | "copied" | "downloaded">("idle");
+
+    function placeButtonOver(target: Element) {
+        const root = rootRef.current;
+        if (!root) return;
+
+        const rootRect = root.getBoundingClientRect();
+        const rect = (target as HTMLElement).getBoundingClientRect();
+
+        const top = rect.top - rootRect.top + (root.scrollTop ?? 0) + 8;
+        const right = rootRect.right - rect.right + 8;
+
+        const clampedTop = Math.max(
+            8,
+            Math.min(top, Math.max(8, root.clientHeight - 40))
+        );
+        const clampedRight = Math.max(
+            8,
+            Math.min(right, Math.max(8, root.clientWidth - 40))
+        );
+
+        setPos({ top: clampedTop, right: clampedRight });
+    }
+
+    function isPointerOverBlockOrButton() {
+        try {
+            const btn = buttonRef.current;
+            const tgt = targetRef.current;
+            const btnHover = btn ? (btn as HTMLElement).matches(":hover") : false;
+            const tgtHover = tgt ? (tgt as HTMLElement).matches(":hover") : false;
+            return btnHover || tgtHover;
+        } catch {
+            return false;
+        }
+    }
+
+    async function copyFromTarget() {
+        const target = targetRef.current;
+        if (!target) return { ok: false, msg: "No target" };
+
+        try {
+            const codeEl =
+                (target.querySelector?.("pre code") as HTMLElement | null) ??
+                (target.querySelector?.("code") as HTMLElement | null) ??
+                (target.querySelector?.(".bn-inline-content") as HTMLElement | null) ??
+                (target as HTMLElement);
+
+            const text = codeEl?.innerText ?? codeEl?.textContent ?? "";
+
+            if (!text) return { ok: false, msg: "Empty code" };
+
+            await navigator.clipboard.writeText(text);
+            return { ok: true };
+        } catch (err) {
+            console.error("copy error", err);
+            return { ok: false, msg: "Copy failed" };
+        }
+    }
+
+    async function downloadFromTarget() {
+        const target = targetRef.current;
+        if (!target) return { ok: false, msg: "No target" };
+
+        try {
+            const fileName = target.getAttribute("data-name") ?? "download";
+            const fileUrl = target.getAttribute("data-url");
+
+            if (!fileUrl) return { ok: false, msg: "No file url" };
+
+            const link = document.createElement("a");
+            link.href = fileUrl;
+            link.download = fileName;
+            link.click();
+
+            return { ok: true };
+        } catch (err) {
+            console.error("download error", err);
+            return { ok: false, msg: "Download failed" };
+        }
+    }
+
+    useEffect(() => {
+        const root = rootRef.current;
+        if (!root) return;
+
+        const prevPos = window.getComputedStyle(root).position;
+        if (prevPos === "static" || !prevPos) {
+            root.style.position = "relative";
+        }
+
+        function clearHideTimer() {
+            if (hideTimerRef.current) {
+                window.clearTimeout(hideTimerRef.current);
+                hideTimerRef.current = null;
+            }
+        }
+        function clearActionTimer() {
+            if (actionTimerRef.current) {
+                window.clearTimeout(actionTimerRef.current);
+                actionTimerRef.current = null;
+            }
+        }
+
+        function onPointerOver(e: PointerEvent) {
+            const el = (e.target as Element).closest?.(
+                TARGET_SELECTOR
+            ) as Element | null;
+            if (!el) return;
+
+            clearHideTimer();
+            targetRef.current = el;
+            placeButtonOver(el);
+            setVisible(true);
+        }
+
+        function onPointerOut(e: PointerEvent) {
+            const from = e.target as Element;
+            const to = (e.relatedTarget as Element | null) ?? null;
+            const fromBlock = from?.closest ? from.closest(TARGET_SELECTOR) : null;
+            const toBlock = to?.closest ? to.closest(TARGET_SELECTOR) : null;
+
+            if (fromBlock && toBlock) return;
+
+            if (to && buttonRef.current && buttonRef.current.contains(to)) {
+                return;
+            }
+
+            clearHideTimer();
+            hideTimerRef.current = window.setTimeout(() => {
+                if (isPointerOverBlockOrButton()) {
+                    hideTimerRef.current = null;
+                    return;
+                }
+                setVisible(false);
+                targetRef.current = null;
+                hideTimerRef.current = null;
+            }, 200);
+        }
+
+        root.addEventListener("pointerover", onPointerOver);
+        root.addEventListener("pointerout", onPointerOut);
+
+        const onScrollOrResize = () => {
+            const t = targetRef.current;
+            if (t && visible) placeButtonOver(t);
+        };
+        window.addEventListener("scroll", onScrollOrResize, true);
+        window.addEventListener("resize", onScrollOrResize);
+
+        return () => {
+            root.removeEventListener("pointerover", onPointerOver);
+            root.removeEventListener("pointerout", onPointerOut);
+            window.removeEventListener("scroll", onScrollOrResize, true);
+            window.removeEventListener("resize", onScrollOrResize);
+
+            clearHideTimer();
+            clearActionTimer();
+        };
+    }, [editor, visible]);
+
+    async function handleClick() {
+        if (!targetRef.current) return;
+
+        const isFile = targetRef.current.matches(
+            '[data-content-type="file"], .bn-block-content[data-content-type="file"]'
+        );
+
+        if (actionTimerRef.current) {
+            window.clearTimeout(actionTimerRef.current);
+            actionTimerRef.current = null;
+        }
+
+        if (isFile) {
+            const res = await downloadFromTarget();
+            if (res.ok) {
+                setStatus("downloaded");
+                actionTimerRef.current = window.setTimeout(() => {
+                    setStatus("idle");
+                    if (!isPointerOverBlockOrButton()) {
+                        setVisible(false);
+                        targetRef.current = null;
+                    }
+                }, 150);
+            }
+        } else {
+            const res = await copyFromTarget();
+            if (res.ok) {
+                setStatus("copied");
+                actionTimerRef.current = window.setTimeout(() => {
+                    setStatus("idle");
+                    if (!isPointerOverBlockOrButton()) {
+                        setVisible(false);
+                        targetRef.current = null;
+                    }
+                }, 150);
+            }
+        }
+    }
+
     return (
-        <div className="max-w-5xl w-full mx-auto">
+        <div className="max-w-5xl w-full mx-auto dark:opacity-90">
             <div className="min-h-[80vh] mb-8">
-                <div className="max-w-5xl mx-auto pb-[33vh]">
-                    <div className="overflow-x-hidden">
+                <div className="max-w-5xl mx-auto">
+                    {/* IMPORTANT: attach ref and relative positioning here so the floating button can be positioned correctly */}
+                    <div className="overflow-x-hidden relative" ref={rootRef}>
                         <BlockNoteView
                             className="pl-0 py-4 -mx-10"
                             spellCheck="false"
@@ -413,38 +651,121 @@ export default function Editor({
                             onChange={handleEditorChange}
                             data-theming-css-variables
                             data-changing-font
-                            formattingToolbar={false}
-                            slashMenu={false}
+                            formattingToolbar={true}
+                            slashMenu={true}
                         >
-                            <span className="fixed top-2 right-2 text-xs">
-                                <span className="fixed top-4 right-4 text-xs flex items-center gap-2">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant={"secondary"} onClick={() => void saveBlog(true)}>
-                                                <span>Save</span>
-                                                {saveStatus === "saving" && <LoaderCircle className="animate-spin" size={16} />}
-                                                {saveStatus === "saved" && <CircleCheck className="text-primary" size={16} />}
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Save Chapter</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </span>
+                            <span className="fixed top-5 left-5 text-xs flex items-center gap-2">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="link" size="icon" asChild>
+                                            <Link href="/dashboard">
+                                                <ArrowLeft />
+                                            </Link>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Home</p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </span>
-
                             <AIMenuController />
                             <FormattingToolbarWithAI />
                             <SuggestionMenuWithAI editor={editor} />
                         </BlockNoteView>
+                        <span className="fixed bottom-4 left-4 text-xs flex items-center gap-2 z-10">
+                            <GooeyMenu items={links} />
+                        </span>
+
+                        {/* moved INSIDE the same container (rootRef) so absolute positioning is relative to rootRef */}
+                        {visible && targetRef.current && (
+                            <div
+                                ref={buttonRef}
+                                style={{
+                                    position: "absolute",
+                                    top: `${pos.top}px`,
+                                    right: `${pos.right}px`,
+                                    zIndex: 9999,
+                                }}
+                            >
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="border-neutral-500 border bg-neutral-700 shadow-xs hover:bg-neutral-600 rounded-sm"
+                                            onClick={handleClick}
+                                        >
+                                            {status === "copied" ? (
+                                                <Copy size={16} className="text-green-400" />
+                                            ) : status === "downloaded" ? (
+                                                <Download size={16} className="text-green-400" />
+                                            ) : targetRef.current?.matches(
+                                                '[data-content-type="file"], .bn-block-content[data-content-type="file"]'
+                                            ) ? (
+                                                <Download size={16} className="text-neutral-50" />
+                                            ) : (
+                                                <Copy size={16} className="text-neutral-50" />
+                                            )}
+                                            <span className="text-xs sr-only">
+                                                {status === "copied"
+                                                    ? "Copied"
+                                                    : status === "downloaded"
+                                                        ? "Downloaded"
+                                                        : targetRef.current?.matches(
+                                                            '[data-content-type="file"], .bn-block-content[data-content-type="file"]'
+                                                        )
+                                                            ? "Download"
+                                                            : "Copy"}
+                                            </span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>
+                                            {status === "copied"
+                                                ? "Copied"
+                                                : status === "downloaded"
+                                                    ? "Downloaded"
+                                                    : targetRef.current?.matches(
+                                                        '[data-content-type="file"], .bn-block-content[data-content-type="file"]'
+                                                    )
+                                                        ? "Download file"
+                                                        : "Copy code"}
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
+            <span className="fixed top-5 right-5 text-xs flex items-center gap-2 z-50">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant={"secondary"} onClick={() => void saveBlog(true)}>
+                            <span className="font-light">Save</span>
+                            {saveStatus === "saving" && <LoaderCircle className="animate-spin" size={16} strokeWidth={1} />}
+                            {saveStatus === "saved" && <CircleCheck className="text-primary" size={16} strokeWidth={1} />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Save Chapter</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Publish id={id} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Share</p>
+                    </TooltipContent>
+                </Tooltip>
+            </span>
+
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <DrawerTrigger asChild>
-                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent">
-                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" />
+                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent z-50 mb-2">
+                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" strokeWidth={1} />
                     </span>
                 </DrawerTrigger>
 
@@ -462,7 +783,7 @@ export default function Editor({
                                         <div className="max-w-md w-full flex items-center justify-between gap-2 p-0.5 m-1 mx-auto rounded-lg hover:bg-accent transition">
                                             <Button
                                                 variant="ghost"
-                                                className={`flex-1 min-w-0 justify-start text-md truncate ${blog.id === id ? "underline text-accent-foreground underline-offset-2" : ""
+                                                className={`flex-1 min-w-0 justify-start text-md font-light truncate ${blog.id === id ? "underline text-accent-foreground underline-offset-2" : ""
                                                     }`}
                                                 title={blog.heading}
                                                 onClick={() => void handleGetBlogById(blog.id)}

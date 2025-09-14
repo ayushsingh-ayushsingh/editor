@@ -70,96 +70,100 @@ export default function MarqueeDemo() {
     return (
         <div className="flex w-full flex-col items-center justify-center overflow-hidden fixed bottom-14 right-0 left-0 -z-50 dark:opacity-70">
             <Marquee className="[--duration:900s] fixed pointer-events-none">
+                <BlueDogLeft />
                 <OrangeDogLeft />
+                <OrangeDogLeft />
+                <BlueDogLeft />
                 <BrownDogLeft />
+                <OrangeDogLeft />
+                <BlueDogLeft />
+                <OrangeDogLeft />
+                <OrangeDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
                 <BrownDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
                 <BrownDogLeft />
+                <OrangeDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
-                <BrownDogLeft />
+                <OrangeDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
-                <BrownDogLeft />
-                <BlueDogLeft />
-                <OrangeDogLeft />
-                <BrownDogLeft />
-                <BlueDogLeft />
-                <OrangeDogLeft />
-                <BrownDogLeft />
-                <BlueDogLeft />
+                <div className="w-[70vw]"></div>
             </Marquee>
             <Marquee reverse className="[--duration:960s] fixed pointer-events-none">
-                <BlueDogRight />
+                <div className="w-[80vw]"></div>
                 <BrownDogRight />
+                <BlueDogRight />
+                <OrangeDogRight />
+                <OrangeDogRight />
+                <BlueDogRight />
+                <BlueDogRight />
+                <OrangeDogRight />
+                <BlueDogRight />
+                <OrangeDogRight />
+                <BlueDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
                 <BrownDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
-                <BrownDogRight />
+                <OrangeDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
                 <BrownDogRight />
                 <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
-                <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
-                <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
                 <OrangeDogRight />
             </Marquee>
             <Marquee className="[--duration:1020s] fixed pointer-events-none">
-                <BrownDogLeft />
+                <BlueDogLeft />
+                <OrangeDogLeft />
+                <OrangeDogLeft />
+                <BlueDogLeft />
+                <BlueDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
                 <BrownDogLeft />
                 <BlueDogLeft />
+                <BlueDogLeft />
+                <BrownDogLeft />
                 <OrangeDogLeft />
                 <BrownDogLeft />
                 <BlueDogLeft />
-                <OrangeDogLeft />
-                <BrownDogLeft />
                 <BlueDogLeft />
                 <OrangeDogLeft />
-                <BrownDogLeft />
-                <BlueDogLeft />
                 <OrangeDogLeft />
-                <BrownDogLeft />
                 <BlueDogLeft />
-                <OrangeDogLeft />
-                <BrownDogLeft />
                 <BlueDogLeft />
+                <BrownDogLeft />
                 <OrangeDogLeft />
+                <div className="w-[90vw]"></div>
             </Marquee>
             <Marquee reverse className="[--duration:1080s] fixed pointer-events-none">
+                <div className="w-[100vw]"></div>
+                <OrangeDogRight />
+                <BlueDogRight />
+                <OrangeDogRight />
+                <OrangeDogRight />
+                <BlueDogRight />
+                <OrangeDogRight />
+                <BlueDogRight />
+                <BrownDogRight />
+                <OrangeDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
                 <BrownDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
-                <BrownDogRight />
+                <BlueDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
                 <BrownDogRight />
                 <OrangeDogRight />
                 <BlueDogRight />
-                <BrownDogRight />
                 <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
-                <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
-                <OrangeDogRight />
-                <BlueDogRight />
-                <BrownDogRight />
             </Marquee>
         </div>
     );

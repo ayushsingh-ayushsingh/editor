@@ -4,8 +4,7 @@ import "./globals.css";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import { Providers } from "./providers";
+import { ThemeToggleButton } from "@/components/ui/mode-toggle";
 
 const custom = Geist_Mono({
   variable: "--font-custom",
@@ -30,16 +29,38 @@ export default async function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="zinc-dark"
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            {children}
-            <Toaster />
-            <ModeToggle />
-          </Providers>
+          <Toaster />
+          {children}
+          <div className="fixed bottom-4 right-4 cursor-pointer z-50">
+            <ThemeToggleButton start="bottom-right" variant="circle" />
+          </div>
         </ThemeProvider>
+        <div
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-75 brightness-90 z-10 pointer-events-none"
+        />
+        <div
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-75 brightness-90 rounded-3xl z-10 pointer-events-none"
+        />
+        <div className="fixed inset-0 pointer-events-none z-2">
+          <div
+            className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(to bottom, var(--background), transparent)',
+            }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 h-16 pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(to top, var(--background), transparent)',
+            }}
+          />
+        </div>
       </body>
     </html>
   );

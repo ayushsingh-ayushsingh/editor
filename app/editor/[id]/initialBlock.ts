@@ -76,6 +76,8 @@ export function getInitialContent(): Block[] {
     ];
 }
 
+
+
 export function extractPlainTextFromBlocks(blocks: Block[]): string {
     return blocks
         .map((block) => {
