@@ -4,21 +4,21 @@ export const links = [
     {
         metadata: "https://pixabay.com/",
         name: "Pixabay",
-        icon: <Image className="text-foreground" strokeWidth={1} />,
+        icon: <Image className="text-foreground" strokeWidth={1.5} />,
     },
     {
         metadata: "https://www.pexels.com/",
         name: "Pexels",
-        icon: <ImagePlus className="text-foreground" strokeWidth={1} />,
+        icon: <ImagePlus className="text-foreground" strokeWidth={1.5} />,
     },
     {
         metadata: "https://excalidraw.com/",
         name: "Excalidraw",
-        icon: <Brush className="text-foreground" strokeWidth={1} />,
+        icon: <Brush className="text-foreground" strokeWidth={1.5} />,
     },
     {
         metadata: "https://www.wikipedia.org/",
         name: "Wikipedia",
-        icon: <Album className="text-foreground" strokeWidth={1} />,
+        icon: <Album className="text-foreground" strokeWidth={1.5} />,
     },
 ];

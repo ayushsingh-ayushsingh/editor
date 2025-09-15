@@ -26,7 +26,7 @@ export default function Publish({ id }: { id: string | null }) {
             <Dialog>
                 <DialogTrigger asChild>
                     <Button variant="secondary" size={"icon"}>
-                        <Send strokeWidth={1} />
+                        <Send strokeWidth={1.5} />
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md z-100">

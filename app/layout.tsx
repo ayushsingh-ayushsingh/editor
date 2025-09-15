@@ -29,21 +29,21 @@ export default async function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="zinc-dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
           <Toaster />
           {children}
           <div className="fixed bottom-4 right-4 cursor-pointer z-50">
-            <ThemeToggleButton start="bottom-right" variant="circle" />
+            <ThemeToggleButton start="bottom-right" blur={true} variant="circle" />
           </div>
         </ThemeProvider>
         <div
-          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-75 brightness-90 z-10 pointer-events-none"
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-15 brightness-95 z-10 pointer-events-none"
         />
         <div
-          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-75 brightness-90 rounded-3xl z-10 pointer-events-none"
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-15 brightness-95 rounded-3xl z-10 pointer-events-none"
         />
         <div className="fixed inset-0 pointer-events-none z-2">
           <div

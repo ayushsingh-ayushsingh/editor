@@ -638,7 +638,7 @@ export default function Editor({
     }
 
     return (
-        <div className="max-w-5xl w-full mx-auto dark:opacity-90">
+        <div className="max-w-5xl w-full mx-auto">
             <div className="min-h-[80vh] mb-8">
                 <div className="max-w-5xl mx-auto">
                     {/* IMPORTANT: attach ref and relative positioning here so the floating button can be positioned correctly */}
@@ -744,8 +744,8 @@ export default function Editor({
                     <TooltipTrigger asChild>
                         <Button variant={"secondary"} onClick={() => void saveBlog(true)}>
                             <span className="font-light">Save</span>
-                            {saveStatus === "saving" && <LoaderCircle className="animate-spin" size={16} strokeWidth={1} />}
-                            {saveStatus === "saved" && <CircleCheck className="text-primary" size={16} strokeWidth={1} />}
+                            {saveStatus === "saving" && <LoaderCircle className="animate-spin" size={16} strokeWidth={1.5} />}
+                            {saveStatus === "saved" && <CircleCheck className="text-primary" size={16} strokeWidth={1.5} />}
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -765,7 +765,7 @@ export default function Editor({
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <DrawerTrigger asChild>
                     <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent z-50 mb-2">
-                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" strokeWidth={1} />
+                        <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" strokeWidth={1.5} />
                     </span>
                 </DrawerTrigger>
 

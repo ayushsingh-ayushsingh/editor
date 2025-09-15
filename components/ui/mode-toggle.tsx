@@ -610,7 +610,7 @@ export const ThemeToggleButton = ({
                 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
             >
-                <Sun className="text-foreground w-4 h-4" strokeWidth={1} />
+                <Sun className="text-foreground w-4 h-4" strokeWidth={1.5} />
             </motion.div>
 
             {/* Moon Icon */}
@@ -624,7 +624,7 @@ export const ThemeToggleButton = ({
                 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
             >
-                <Moon className="text-foreground w-4 h-4" strokeWidth={1} />
+                <Moon className="text-foreground w-4 h-4" strokeWidth={1.5} />
             </motion.div>
         </button>
     );
