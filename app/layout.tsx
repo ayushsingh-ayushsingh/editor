@@ -36,18 +36,18 @@ export default async function RootLayout({
           <Toaster />
           {children}
           <div className="fixed bottom-4 right-4 cursor-pointer z-50">
-            <ThemeToggleButton start="bottom-right" blur={true} variant="circle" />
+            <ThemeToggleButton start="bottom-right" blur={true} variant="circle-blur" />
           </div>
         </ThemeProvider>
-        <div
-          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-15 brightness-95 z-10 pointer-events-none"
+        {/* <div
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-60 brightness-98 z-10 pointer-events-none"
         />
         <div
-          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-15 brightness-95 rounded-3xl z-10 pointer-events-none"
-        />
-        <div className="fixed inset-0 pointer-events-none z-2">
+          className="fixed top-0 left-0 h-[100vh] w-[100vw] border-8 border-secondary dark:brightness-60 brightness-98 rounded-4xl z-10 pointer-events-none"
+        /> */}
+        {/* <div className="fixed inset-0 pointer-events-none z-2">
           <div
-            className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            className="absolute inset-x-0 top-0 h-6 pointer-events-none"
             style={{
               backgroundImage:
                 'linear-gradient(to bottom, var(--background), transparent)',
@@ -60,7 +60,7 @@ export default async function RootLayout({
                 'linear-gradient(to top, var(--background), transparent)',
             }}
           />
-        </div>
+        </div> */}
       </body>
     </html>
   );

@@ -672,7 +672,7 @@ export default function Editor({
                             <FormattingToolbarWithAI />
                             <SuggestionMenuWithAI editor={editor} />
                         </BlockNoteView>
-                        <span className="fixed bottom-4 left-4 text-xs flex items-center gap-2 z-10">
+                        <span className="fixed bottom-2 left-2 text-xs flex items-center gap-2 z-50">
                             <GooeyMenu items={links} />
                         </span>
 
@@ -739,7 +739,7 @@ export default function Editor({
                 </div>
             </div>
 
-            <span className="fixed top-5 right-5 text-xs flex items-center gap-2 z-50">
+            <span className="fixed top-2 right-2 text-xs flex items-center gap-2 z-50">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant={"secondary"} onClick={() => void saveBlog(true)}>
@@ -752,14 +752,7 @@ export default function Editor({
                         <p>Save Chapter</p>
                     </TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Publish id={id} />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Share</p>
-                    </TooltipContent>
-                </Tooltip>
+                <Publish id={id} />
             </span>
 
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -771,7 +764,7 @@ export default function Editor({
 
                 <DrawerContent className="focus-visible:outline-none focus-visible:ring-0 focus:outline-none focus:ring-0">
                     <DrawerHeader>
-                        <DrawerTitle className="text-lg font-medium">Your Creations, {userName}</DrawerTitle>
+                        <DrawerTitle className="text-lg font-medium">Creations By {userName}</DrawerTitle>
                         <DrawerDescription className="sr-only">
                             A list of all the creations of {userName} - {userEmail}
                         </DrawerDescription>

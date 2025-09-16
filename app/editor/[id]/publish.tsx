@@ -15,6 +15,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 export default function Publish({ id }: { id: string | null }) {
 
     if (!id) {
@@ -25,9 +31,16 @@ export default function Publish({ id }: { id: string | null }) {
         <div>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="secondary" size={"icon"}>
-                        <Send strokeWidth={1.5} />
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="secondary" size={"icon"}>
+                                <Send strokeWidth={1.5} />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Share</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md z-100">
                     <DialogHeader>

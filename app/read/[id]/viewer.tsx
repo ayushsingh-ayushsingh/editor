@@ -262,7 +262,7 @@ export default function Viewer({ initialContent }: ViewerProps) {
                 <div className="max-w-5xl mx-auto">
                     <div className="overflow-x-hidden relative" ref={rootRef}>
                         <BlockNoteView
-                            className="p-2 -mx-10 mt-20"
+                            className="p-2 -mx-10"
                             spellCheck="false"
                             theme="light"
                             editor={editor}
