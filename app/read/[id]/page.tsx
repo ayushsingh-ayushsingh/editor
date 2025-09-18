@@ -1,6 +1,6 @@
 import { getBlogById } from "../actions/getBlogById";
-import BlogViewer from "./apiDialog";
 import { redirect } from "next/navigation";
+import BlogViewer from "./apiDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
 import { User, ThumbsUp, ThumbsDown, BanIcon, ArrowLeft } from "lucide-react";
@@ -13,7 +13,12 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import BlocksToMarkdown from "./markdown";
+import Utilities from "./utilityBanner";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type BlogSelect = InferSelectModel<typeof blog>;
 
@@ -52,7 +57,59 @@ export default async function Page({ params }: PageProps) {
             <div className="max-w-md mx-auto p-4 hidden">
                 {parsed}
             </div>
-            <div className="max-w-5xl mx-auto p-4 -z-20 mt-2">
+            <div className="max-w-5xl mx-auto -z-20">
+                <div className="flex justify-between items-center">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="link" size="icon" asChild>
+                                <Link href="/dashboard">
+                                    <ArrowLeft />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Home</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <div className="py-2">
+                        {session ?
+                            <div>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="link" size="icon" asChild className="mx-2">
+                                            <Link href="/profile">
+                                                {session.user.image ? (
+                                                    <Image
+                                                        src={session.user.image}
+                                                        width={32}
+                                                        height={32}
+                                                        alt={session.user.name}
+                                                        className="w-8 h-8 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center">
+                                                        <User strokeWidth={1.5} />
+                                                    </div>
+                                                )}
+                                            </Link>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Profile</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                            :
+                            <div className="mx-2">
+                                <Button asChild variant={"secondary"}>
+                                    <Link href={"/login"}>
+                                        Login
+                                    </Link>
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
                 <AspectRatio ratio={16 / 9} className="rounded mx-2">
                     <img
                         src="https://cdn.pixabay.com/photo/2025/05/30/17/15/mountains-9631825_1280.jpg"
@@ -62,7 +119,7 @@ export default async function Page({ params }: PageProps) {
                 </AspectRatio>
                 <LikeSubscribe userImage={userImage || ""} blog={blog.blog} />
                 <hr className="my-3 m-2" />
-                <BlocksToMarkdown content={blockContent} />
+                <Utilities content={blockContent} id={id} />
                 <hr className="my-3 m-2" />
             </div>
             <BlogViewer
@@ -79,7 +136,7 @@ export default async function Page({ params }: PageProps) {
                                 Comment as {session.user.name}
                             </div>
                             <div className="mt-3 flex items-end mx-2 justify-between gap-3">
-                                <Textarea className="border border-primary/50" placeholder="What are your thoughts..." />
+                                <Textarea placeholder="What are your thoughts..." />
                             </div>
                             <div className="mb-6 mt-3 flex items-end mx-2 justify-end gap-3">
                                 <Button className="w-30" variant={"secondary"}>
@@ -95,7 +152,7 @@ export default async function Page({ params }: PageProps) {
                                 </Link>
                             </div>
                             <div className="my-3 flex items-end justify-between w-full">
-                                <Textarea className="border mx-2 border-primary/50" placeholder="What are your thoughts..." />
+                                <Textarea className="mx-2" placeholder="What are your thoughts..." />
                                 <Button className="w-30 mx-2" variant={"secondary"}>
                                     Comment
                                 </Button>

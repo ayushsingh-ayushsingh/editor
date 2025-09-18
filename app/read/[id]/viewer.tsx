@@ -271,22 +271,7 @@ export default function Viewer({ initialContent }: ViewerProps) {
                             data-changing-font
                             formattingToolbar={false}
                             slashMenu={false}
-                        >
-                            <span className="fixed top-4 left-4 text-xs flex items-center gap-2">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="link" size="icon" asChild>
-                                            <Link href="/dashboard">
-                                                <ArrowLeft />
-                                            </Link>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Home</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </span>
-                        </BlockNoteView>
+                        />
 
                         {visible && targetRef.current && (
                             <div
