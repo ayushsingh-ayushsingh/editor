@@ -16,6 +16,15 @@
   }
 }
 
+.bn-button[aria-label="Add block"] {
+  opacity: 0.5;
+}
+
+.bn-button[aria-label="Open block menu"] {
+  opacity: 0.5;
+  margin-right: 12px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

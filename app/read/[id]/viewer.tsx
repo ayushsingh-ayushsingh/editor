@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Block } from "@blocknote/core";
 import { codeBlock } from "@blocknote/code-block";
-import { ArrowLeft, Copy, Download } from "lucide-react";
-
-import Link from "next/link";
+import { Copy, Download } from "lucide-react";
 
 import {
     Tooltip,
@@ -262,7 +260,7 @@ export default function Viewer({ initialContent }: ViewerProps) {
                 <div className="max-w-5xl mx-auto">
                     <div className="overflow-x-hidden relative" ref={rootRef}>
                         <BlockNoteView
-                            className="p-2 -mx-10"
+                            className="p-2 -mx-12"
                             spellCheck="false"
                             theme="light"
                             editor={editor}

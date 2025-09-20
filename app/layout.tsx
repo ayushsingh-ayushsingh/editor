@@ -35,7 +35,7 @@ export default async function RootLayout({
         >
           <Toaster />
           {children}
-          <div className="fixed bottom-4 right-4 cursor-pointer z-50">
+          <div className="fixed bottom-2 right-2 cursor-pointer z-50">
             <ThemeToggleButton start="bottom-right" blur={true} variant="circle-blur" />
           </div>
         </ThemeProvider>

@@ -54,13 +54,6 @@
   text-decoration: underline !important;
 }
 
-.bn-container[data-theming-css-variables] u {
-  background: var(--color-card) !important;
-  padding: var(--radius-md) !important;
-  border-radius: var(--radius-md) !important;
-  text-decoration: underline !important;
-}
-
 /* Force Image/File Upload Placeholder to respect theme */
 .bn-container[data-theming-css-variables] .bn-add-file-button {
   display: none;

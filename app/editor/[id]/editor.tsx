@@ -1,3 +1,4 @@
+// app/editor/[id]/editor.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -6,7 +7,7 @@ import { en } from "@blocknote/core/locales";
 import uploadFile from "./uploadFile";
 import { toast } from "sonner";
 import { codeBlock } from "@blocknote/code-block";
-import { ChevronUp, Trash2, CircleCheck, LoaderCircle, ArrowLeft, Copy, Download, Send } from "lucide-react";
+import { ChevronUp, Trash2, CircleCheck, LoaderCircle, ArrowLeft, Copy, Download } from "lucide-react";
 import { createNewBlog, updateBlogById } from "../actions/saveUsersBlog";
 import { links } from "./links";
 
@@ -34,7 +35,7 @@ import {
 
 import debounce from "lodash.debounce";
 
-import { BlockNoteEditor, filterSuggestionItems } from "@blocknote/core";
+import { filterSuggestionItems } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import "../css/styles.css";
@@ -47,14 +48,9 @@ import {
     getFormattingToolbarItems,
     useCreateBlockNote,
 } from "@blocknote/react";
-import {
-    AIMenuController,
-    AIToolbarButton,
-    createAIExtension,
-    getAISlashMenuItems,
-} from "@blocknote/xl-ai";
-import "@blocknote/xl-ai/style.css";
-import { en as aiEn } from "@blocknote/xl-ai/locales";
+
+import { en as coreAiEn } from "@blocknote/xl-ai/locales"; // fallback if dynamic import fails (safe small import)
+// NOTE: we will dynamically import the rest of @blocknote/xl-ai to avoid double-registration runtime issues.
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -88,8 +84,8 @@ interface EditorProps {
 }
 
 /**
-     * Selector used to find code block or file block containers inside BlockNote.
-     */
+ * Selector used to find code block or file block containers inside BlockNote.
+ */
 const TARGET_SELECTOR = `
     .bn-block-content[data-content-type="codeBlock"],
     .bn-block-content[data-content-type="codeBlock-inline"],
@@ -99,33 +95,6 @@ const TARGET_SELECTOR = `
     .bn-block-content[data-content-type="file"]
 `;
 
-function FormattingToolbarWithAI() {
-    return (
-        <FormattingToolbarController
-            formattingToolbar={() => (
-                <FormattingToolbar>
-                    {...getFormattingToolbarItems()}
-                    <AIToolbarButton />
-                </FormattingToolbar>
-            )}
-        />
-    );
-}
-
-function SuggestionMenuWithAI(props: { editor: BlockNoteEditor<any, any, any> }) {
-    return (
-        <SuggestionMenuController
-            triggerCharacter="/"
-            getItems={async (query) =>
-                filterSuggestionItems(
-                    [...getDefaultReactSlashMenuItems(props.editor), ...getAISlashMenuItems(props.editor)],
-                    query
-                )
-            }
-        />
-    );
-}
-
 export default function Editor({
     userName,
     userEmail,
@@ -134,7 +103,7 @@ export default function Editor({
     initialContent,
     initialParsedContent,
 }: EditorProps) {
-    const router = useRouter(); // <-- router instance to navigate to /editor/:id
+    const router = useRouter();
     const rootRef = useRef<HTMLDivElement | null>(null);
 
     const locale = en;
@@ -144,10 +113,11 @@ export default function Editor({
     const lastSavedRef = useRef<string>("");
 
     // Editor content state
-    const [blocks, setBlocks] = useState<Block[]>(initialContent?.length ? initialContent : getInitialContent());
+    const [blocks, setBlocks] = useState<Block[]>(
+        initialContent?.length ? initialContent : getInitialContent()
+    );
     const [parsedContent, setParsedContent] = useState(initialParsedContent ?? "");
 
-    // Heading fallback now "..." per your request
     function computeHeading(text: string) {
         return text && text.trim().length > 0 ? text.replace(/\s+/g, " ").trim().substring(0, 50) : "...";
     }
@@ -158,7 +128,82 @@ export default function Editor({
     const [blogsList, setBlogsList] = useState<any[]>([]);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+    //
+    // DYNAMIC XL-AI LOADING
+    // We dynamically import the xl-ai module on the client and create the AI extension factory exactly once.
+    //
+    const [xlAiModule, setXlAiModule] = useState<any | null>(null);
+    const [xlAiLocale, setXlAiLocale] = useState<any | null>(null);
+    const [aiExtensionFactory, setAiExtensionFactory] = useState<null | ((editor: any) => any)>(null);
+    const [aiMenuItemsFn, setAiMenuItemsFn] = useState<null | ((editor: any) => any[])>(null);
+    const [AiMenuControllerComponent, setAiMenuControllerComponent] = useState<any | null>(null);
+    const [AiToolbarButtonComponent, setAiToolbarButtonComponent] = useState<any | null>(null);
+
+    // create the Google provider instance once (memoized)
+    const googleProvider = useMemo(() => {
+        try {
+            // createGoogleGenerativeAI returns a provider factory; invoke with model name
+            return (createGoogleGenerativeAI({ apiKey: googleApiKey || "" }) as any)("gemini-2.5-flash");
+        } catch (err) {
+            console.warn("createGoogleGenerativeAI error:", err);
+            return null;
+        }
+    }, [googleApiKey]);
+
+    // Dynamically load @blocknote/xl-ai on the client only, then create the extension factory once
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                // dynamic import avoids top-level evaluation during SSR or duplicate registration
+                const mod = await import("@blocknote/xl-ai");
+                // load locales from package dynamically too (safe)
+                let localesMod = null;
+                try {
+                    localesMod = await import("@blocknote/xl-ai/locales");
+                } catch {
+                    localesMod = { en: coreAiEn }; // fallback
+                }
+
+                if (!mounted) return;
+
+                setXlAiModule(mod);
+                setXlAiLocale(localesMod?.en ?? coreAiEn);
+
+                // create the factory only once (storing the returned factory function)
+                if (mod?.createAIExtension && googleProvider) {
+                    try {
+                        const factory = mod.createAIExtension({ model: googleProvider } as any);
+                        // factory is a function (editor) => AIExtension
+                        setAiExtensionFactory(() => factory);
+                    } catch (err) {
+                        console.warn("createAIExtension failed:", err);
+                    }
+                }
+
+                // stash other helpers (menu items + UI components)
+                if (mod?.getAISlashMenuItems) {
+                    setAiMenuItemsFn(() => mod.getAISlashMenuItems);
+                }
+                if (mod?.AIMenuController) {
+                    setAiMenuControllerComponent(() => mod.AIMenuController);
+                }
+                if (mod?.AIToolbarButton) {
+                    setAiToolbarButtonComponent(() => mod.AIToolbarButton);
+                }
+            } catch (err) {
+                console.warn("Dynamic import of @blocknote/xl-ai failed:", err);
+            }
+        })();
+
+        return () => {
+            mounted = false;
+        };
+        // googleProvider is needed to create factory; reload if key changes
+    }, [googleProvider]);
+
     // create editor once with stable initial content
+    // pass the AI extension factory if available (the factory itself is stable because we set it only once)
     const editor = useCreateBlockNote({
         codeBlock,
         tables: {
@@ -167,7 +212,6 @@ export default function Editor({
             cellTextColor: true,
             headers: true,
         },
-        // set the editor's initial content from props (server) or fallback
         initialContent: initialContent?.length ? initialContent : getInitialContent(),
         dictionary: {
             ...locale,
@@ -177,16 +221,13 @@ export default function Editor({
                 default: "...",
                 heading: "...",
             },
-            ai: aiEn,
+            // if xl-ai locales available use them, else fallback
+            ai: xlAiLocale ?? coreAiEn,
         },
         uploadFile,
-        extensions: [
-            createAIExtension({
-                model: createGoogleGenerativeAI({
-                    apiKey: googleApiKey || "",
-                })("gemini-2.5-flash"),
-            }),
-        ],
+        // only include extension if factory exists
+        // cast to any to avoid cross-package type constraints at compile-time (short term)
+        extensions: aiExtensionFactory ? [aiExtensionFactory as unknown as any] : [],
     });
 
     // fetchBlogs wrapped in useCallback so we can await it from other functions safely
@@ -239,7 +280,6 @@ export default function Editor({
 
             // update URL so refresh/bookmark preserves the blog id
             try {
-                // use replace to avoid extra history entries
                 void router.replace(`/editor/${newId}`);
             } catch (err) {
                 console.warn("router.replace failed", err);
@@ -640,11 +680,10 @@ export default function Editor({
     return (
         <div className="max-w-5xl w-full mx-auto">
             <div className="min-h-[80vh] mb-8">
-                <div className="max-w-5xl mx-auto">
-                    {/* IMPORTANT: attach ref and relative positioning here so the floating button can be positioned correctly */}
-                    <div className="overflow-x-hidden relative" ref={rootRef}>
+                <div className="max-w-3xl mx-auto">
+                    <div className="overflow-x-hidden relative -mx-12" ref={rootRef}>
                         <BlockNoteView
-                            className="pl-0 py-4 -mx-10"
+                            className="pl-0 py-4"
                             spellCheck="false"
                             theme="light"
                             editor={editor}
@@ -654,7 +693,7 @@ export default function Editor({
                             formattingToolbar={true}
                             slashMenu={true}
                         >
-                            <span className="fixed top-5 left-5 text-xs flex items-center gap-2">
+                            <span className="fixed top-2 left-2 text-xs flex items-center gap-2">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="link" size="icon" asChild>
@@ -668,15 +707,36 @@ export default function Editor({
                                     </TooltipContent>
                                 </Tooltip>
                             </span>
-                            <AIMenuController />
-                            <FormattingToolbarWithAI />
-                            <SuggestionMenuWithAI editor={editor} />
+
+                            {AiMenuControllerComponent ? React.createElement(AiMenuControllerComponent) : null}
+
+                            <FormattingToolbarController
+                                formattingToolbar={() => (
+                                    <FormattingToolbar>
+                                        {getFormattingToolbarItems()}
+                                        {AiToolbarButtonComponent ? React.createElement(AiToolbarButtonComponent) : null}
+                                    </FormattingToolbar>
+                                )}
+                            />
+
+                            <SuggestionMenuController
+                                triggerCharacter="/"
+                                getItems={async (query) =>
+                                    filterSuggestionItems(
+                                        [
+                                            ...getDefaultReactSlashMenuItems(editor as any),
+                                            ...(aiMenuItemsFn ? (aiMenuItemsFn as any)(editor as any) : []),
+                                        ],
+                                        query
+                                    )
+                                }
+                            />
                         </BlockNoteView>
+
                         <span className="fixed bottom-2 left-2 text-xs flex items-center gap-2 z-50">
                             <GooeyMenu items={links} />
                         </span>
 
-                        {/* moved INSIDE the same container (rootRef) so absolute positioning is relative to rootRef */}
                         {visible && targetRef.current && (
                             <div
                                 ref={buttonRef}
@@ -757,7 +817,7 @@ export default function Editor({
 
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <DrawerTrigger asChild>
-                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent z-50 mb-2">
+                    <span className="mx-auto fixed bottom-2 left-0 flex items-center justify-center rounded-md right-0 size-9 hover:bg-accent z-50">
                         <ChevronUp className="size-6 hover:bg-accent w-5 h-5 z-50" strokeWidth={1.5} />
                     </span>
                 </DrawerTrigger>

@@ -57,7 +57,7 @@ export default async function Page({ params }: PageProps) {
             <div className="max-w-md mx-auto p-4 hidden">
                 {parsed}
             </div>
-            <div className="max-w-5xl mx-auto -z-20">
+            <div className="max-w-5xl mx-auto -z-20 px-2">
                 <div className="flex justify-between items-center">
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -73,7 +73,10 @@ export default async function Page({ params }: PageProps) {
                     </Tooltip>
                     <div className="py-2">
                         {session ?
-                            <div>
+                            <div className="flex items-center">
+                                <span className="truncate max-w-36 text-sm text-light">
+                                    {session.user.name}
+                                </span>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="link" size="icon" asChild className="mx-2">
@@ -118,7 +121,6 @@ export default async function Page({ params }: PageProps) {
                     />
                 </AspectRatio>
                 <LikeSubscribe userImage={userImage || ""} blog={blog.blog} />
-                <hr className="my-3 m-2" />
                 <Utilities content={blockContent} id={id} />
                 <hr className="my-3 m-2" />
             </div>
@@ -131,7 +133,7 @@ export default async function Page({ params }: PageProps) {
                 <hr className="my-3 m-2" />
                 {
                     session ?
-                        <div className="max-w-5xl mx-auto p-0 -z-20 mt-20">
+                        <div className="max-w-5xl mx-auto p-0 -z-20 my-4">
                             <div className="font-light text-secondary-foreground/80 border-l-4 mx-2 py-2 pl-2 flex items-center gap-2 justify-between flex-1 truncate">
                                 Comment as {session.user.name}
                             </div>
@@ -145,17 +147,11 @@ export default async function Page({ params }: PageProps) {
                             </div>
                         </div>
                         :
-                        <div className="max-w-5xl mx-auto p-0 -z-20 mt-2">
+                        <div className="max-w-5xl mx-auto p-0 -z-20 my-4">
                             <div className=" font-light text-secondary-foreground/80 border-l-4 mx-2 p-2">
-                                Comment after you <Link href={"/login"} className="underline text-primary">
-                                    Login here
+                                You may comment after you <Link href={"/login"} target="_blank" className="underline text-primary">
+                                    Login
                                 </Link>
-                            </div>
-                            <div className="my-3 flex items-end justify-between w-full">
-                                <Textarea className="mx-2" placeholder="What are your thoughts..." />
-                                <Button className="w-30 mx-2" variant={"secondary"}>
-                                    Comment
-                                </Button>
                             </div>
                         </div>
                 }
@@ -233,7 +229,7 @@ interface LikeSubscribeProps {
 export function LikeSubscribe({ userImage, blog }: LikeSubscribeProps) {
     return (
         <div>
-            <div className="my-3 flex items-center justify-between">
+            <div className="my-3 flex items-center justify-between py-1">
                 <Link className="flex items-center gap-2 hover:underline underline-offset-2" href={"/"}>
                     <div className="mx-2">
                         {userImage ? (
@@ -258,16 +254,19 @@ export function LikeSubscribe({ userImage, blog }: LikeSubscribeProps) {
                     Subscribe
                 </Button>
             </div>
+            <hr className="my-3 m-2" />
             <div className="mx-2 my-2 flex justify-between items-center">
                 <div className="flex items-center">
                     <div className="text-sm font-light text-secondary-foreground/80">
                         {blog.createdAt.toDateString()}
                     </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <ToggleGroup type="single" className="w-30 flex gap-1">
+                <div className="flex items-center">
+                    <ToggleGroup type="single" className="w-19 flex gap-1">
                         <ToggleGroupItem value="like" className="rounded-md"><ThumbsUp /></ToggleGroupItem>
                         <ToggleGroupItem value="dislike" className="rounded-md"><ThumbsDown /></ToggleGroupItem>
+                    </ToggleGroup>
+                    <ToggleGroup type="single" className="w-9 flex ml-1">
                         <ToggleGroupItem value="ban" className="rounded-md"><BanIcon /></ToggleGroupItem>
                     </ToggleGroup>
                 </div>
