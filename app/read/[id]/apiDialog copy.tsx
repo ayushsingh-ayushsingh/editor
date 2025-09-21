@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Block } from "@blocknote/core";
 
-import { getBlogById } from "../actions/getBlogById";
+import { getBlogById } from "../actions/getPublishedBlogById";
 
 import { Button } from "@/components/ui/button";
 import {

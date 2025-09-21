@@ -1,6 +1,6 @@
 import React from "react";
 import PDFViewerClient from "./pdfViewerClient";
-import { getBlogById } from "../../actions/getBlogById";
+import { getBlogById } from "../../actions/getPublishedBlogById";
 import { redirect } from "next/navigation";
 
 interface PageProps {

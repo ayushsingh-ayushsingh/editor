@@ -1,4 +1,3 @@
-// app/editor/[id]/editor.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -221,12 +220,9 @@ export default function Editor({
                 default: "...",
                 heading: "...",
             },
-            // if xl-ai locales available use them, else fallback
             ai: xlAiLocale ?? coreAiEn,
         },
         uploadFile,
-        // only include extension if factory exists
-        // cast to any to avoid cross-package type constraints at compile-time (short term)
         extensions: aiExtensionFactory ? [aiExtensionFactory as unknown as any] : [],
     });
 

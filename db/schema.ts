@@ -17,6 +17,7 @@ import {
 import {
   publishedBlogs as publishedBlogsTable,
   blogLikes as blogLikesTable,
+  blogDislikes as blogDislikesTable,
   blogComments as blogCommentsTable,
 } from "./schema/publish"
 
@@ -32,6 +33,7 @@ export const files = filesTable;
 
 export const publishedBlogs = publishedBlogsTable;
 export const blogLikes = blogLikesTable;
+export const blogDislikes = blogDislikesTable;
 export const blogComments = blogCommentsTable;
 
 export const schema = {
@@ -44,5 +46,6 @@ export const schema = {
   files,
   publishedBlogs,
   blogLikes,
-  blogComments
+  blogDislikes,
+  blogComments,
 }

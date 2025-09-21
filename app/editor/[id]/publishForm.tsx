@@ -171,7 +171,7 @@ export default function GeneratedForm({ blogId }: Props) {
             const visibility = values["radio-0"] === "public" ? "Public" : "Unlisted";
 
             const result = await publishBlog({
-                userBlogId: blogId,
+                blogId,
                 bannerImageId: bannerFileId,
                 imageSource: values.source?.trim() ?? null,
                 visibility,
