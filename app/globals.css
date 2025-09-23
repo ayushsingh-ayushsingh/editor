@@ -17,11 +17,11 @@
 }
 
 .bn-button[aria-label="Add block"] {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .bn-button[aria-label="Open block menu"] {
-  opacity: 0.5;
+  opacity: 0.35;
   margin-right: 12px;
 }
 
